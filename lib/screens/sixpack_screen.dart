@@ -6,35 +6,27 @@ class SixPackScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Primeira linha
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+      body: Column(
+        children: [
+          Expanded(
+            child: Row(
               children: [
-                Container(width: 100, height: 100, color: Colors.redAccent),
-                const SizedBox(width: 20),
-                Container(width: 100, height: 100, color: Colors.greenAccent),
-                const SizedBox(width: 20),
-                Container(width: 100, height: 100, color: Colors.blueAccent),
+                Expanded(child: Container(color: Colors.redAccent)),
+                Expanded(child: Container(color: Colors.greenAccent)),
+                Expanded(child: Container(color: Colors.blueAccent)),
               ],
             ),
-            const SizedBox(height: 20),
-            // Segunda linha
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+          ),
+          Expanded(
+            child: Row(
               children: [
-                Container(width: 100, height: 100, color: Colors.orangeAccent),
-                const SizedBox(width: 20),
-                Container(width: 100, height: 100, color: Colors.purpleAccent),
-                const SizedBox(width: 20),
-                Container(width: 100, height: 100, color: Colors.yellowAccent),
+                Expanded(child: Container(color: Colors.orangeAccent)),
+                Expanded(child: Container(color: Colors.purpleAccent)),
+                Expanded(child: Container(color: Colors.yellowAccent)),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
