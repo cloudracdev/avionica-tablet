@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/websocket_service.dart';
+import 'sixpack_screen.dart';
 
 class TelemetryScreen extends StatefulWidget {
   const TelemetryScreen({Key? key}) : super(key: key);
@@ -42,6 +43,18 @@ class _TelemetryScreenState extends State<TelemetryScreen> {
 
   void _conectar() {
     _wsService.connect(_ipController.text);
+    
+    // Aguardar conexão e navegar para sixpack
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_wsService.isConnected && mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SixPackScreen(wsService: _wsService),
+          ),
+        );
+      }
+    });
   }
 
   void _desconectar() {
