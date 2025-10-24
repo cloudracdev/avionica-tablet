@@ -16,6 +16,9 @@ class _SixPackScreenState extends State<SixPackScreen> {
   // Subscription do WebSocket
   StreamSubscription? _subscription;
   
+  // PageView controller
+  final PageController _pageController = PageController();
+  
   // Dados dos instrumentos
   double velocidade = 0;
   double altitude = 0;
@@ -23,6 +26,10 @@ class _SixPackScreenState extends State<SixPackScreen> {
   double pitch = 0;
   double roll = 0;
   double vario = 0;
+  double temperatura = 0;
+  double pressao = 0;
+  double lat = 0;
+  double lng = 0;
 
   @override
   void initState() {
@@ -34,7 +41,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
       DeviceOrientation.landscapeRight,
     ]);
 
-    // Escutar dados do WebSocket com subscription cancelável
+    // Escutar dados do WebSocket
     _subscription = widget.wsService.dataStream.listen((data) {
       if (mounted) {
         setState(() {
@@ -44,6 +51,10 @@ class _SixPackScreenState extends State<SixPackScreen> {
           pitch = data['pitch']?.toDouble() ?? 0.0;
           roll = data['roll']?.toDouble() ?? 0.0;
           vario = data['vario']?.toDouble() ?? 0.0;
+          temperatura = data['temperatura']?.toDouble() ?? 0.0;
+          pressao = data['pressao']?.toDouble() ?? 0.0;
+          lat = data['lat']?.toDouble() ?? 0.0;
+          lng = data['lng']?.toDouble() ?? 0.0;
         });
       }
     });
@@ -51,10 +62,9 @@ class _SixPackScreenState extends State<SixPackScreen> {
 
   @override
   void dispose() {
-    // Cancelar subscription
     _subscription?.cancel();
+    _pageController.dispose();
     
-    // Restaurar orientações ao sair
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -64,39 +74,34 @@ class _SixPackScreenState extends State<SixPackScreen> {
     super.dispose();
   }
 
+  // Converter heading em direção cardinal
+  String _getCardinalDirection(double degrees) {
+    if (degrees >= 337.5 || degrees < 22.5) return 'N';
+    if (degrees >= 22.5 && degrees < 67.5) return 'NE';
+    if (degrees >= 67.5 && degrees < 112.5) return 'L';
+    if (degrees >= 112.5 && degrees < 157.5) return 'SE';
+    if (degrees >= 157.5 && degrees < 202.5) return 'S';
+    if (degrees >= 202.5 && degrees < 247.5) return 'SO';
+    if (degrees >= 247.5 && degrees < 292.5) return 'O';
+    return 'NO';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Grid 3x2
-          Column(
+          // PageView com 2 páginas
+          PageView(
+            controller: _pageController,
             children: [
-              // Linha superior
-              Expanded(
-                child: Row(
-                  children: [
-                    Expanded(child: RepaintBoundary(child: _buildVelocimetro())),
-                    Expanded(child: RepaintBoundary(child: _buildHorizonte())),
-                    Expanded(child: RepaintBoundary(child: _buildAltimetro())),
-                  ],
-                ),
-              ),
-              // Linha inferior
-              Expanded(
-                child: Row(
-                  children: [
-                    Expanded(child: RepaintBoundary(child: _buildDirecao())),
-                    Expanded(child: RepaintBoundary(child: _buildCoordenador())),
-                    Expanded(child: RepaintBoundary(child: _buildVariometro())),
-                  ],
-                ),
-              ),
+              _buildSixPackPage(),
+              _buildTelemetryPage(),
             ],
           ),
 
-          // Botão desconectar (canto superior direito)
+          // Botão desconectar
           Positioned(
             top: 16,
             right: 16,
@@ -114,8 +119,148 @@ class _SixPackScreenState extends State<SixPackScreen> {
               ),
             ),
           ),
+
+          // Indicador de página
+          Positioned(
+            bottom: 8,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  // PÁGINA 1: SIX-PACK
+  Widget _buildSixPackPage() {
+    return Column(
+      children: [
+        // Linha superior
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(child: RepaintBoundary(child: _buildVelocimetro())),
+              Expanded(child: RepaintBoundary(child: _buildHorizonte())),
+              Expanded(child: RepaintBoundary(child: _buildAltimetro())),
+            ],
+          ),
+        ),
+        // Linha inferior
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(child: RepaintBoundary(child: _buildBussola())),
+              Expanded(child: RepaintBoundary(child: _buildCoordenador())),
+              Expanded(child: RepaintBoundary(child: _buildVariometro())),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // PÁGINA 2: TELEMETRIA EXTRA
+  Widget _buildTelemetryPage() {
+    return Column(
+      children: [
+        // Mapa (futuro) - ocupa toda largura
+        Expanded(
+          flex: 3,
+          child: Container(
+            margin: const EdgeInsets.only(top: 8, bottom: 4), // Apenas margem vertical
+            decoration: BoxDecoration(
+              color: Colors.grey.shade900,
+              border: Border.all(color: Colors.blue, width: 2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.map, color: Colors.blue, size: 64),
+                const SizedBox(height: 16),
+                const Text(
+                  '📍 MAPA',
+                  style: TextStyle(
+                    color: Colors.blue,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Lat: ${lat.toStringAsFixed(6)}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                  ),
+                ),
+                Text(
+                  'Lng: ${lng.toStringAsFixed(6)}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Temperatura e Pressão - mais compactos
+        Expanded(
+          flex: 2,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 24), // Espaço para indicador
+            child: Row(
+              children: [
+                Expanded(
+                  child: RepaintBoundary(
+                    child: _buildInstrumentoCompacto(
+                      titulo: 'TEMPERATURA',
+                      valor: '${temperatura.toStringAsFixed(1)}',
+                      unidade: '°C',
+                      cor: Colors.red,
+                      icone: Icons.thermostat,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: RepaintBoundary(
+                    child: _buildInstrumentoCompacto(
+                      titulo: 'PRESSÃO',
+                      valor: '${(pressao / 100).toStringAsFixed(0)}',
+                      unidade: 'hPa',
+                      cor: Colors.purple,
+                      icone: Icons.compress,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -133,11 +278,12 @@ class _SixPackScreenState extends State<SixPackScreen> {
   // 2️⃣ HORIZONTE ARTIFICIAL
   Widget _buildHorizonte() {
     return _buildInstrumento(
-      titulo: 'HORIZONTE',
+      titulo: 'HORIZONTE ARTIFICIAL',
       valor: 'P:${pitch.toInt()}° R:${roll.toInt()}°',
       unidade: '',
       cor: Colors.blue,
       icone: Icons.airplanemode_active,
+      fontSize: 14, // Fonte menor para caber o título
     );
   }
 
@@ -152,25 +298,28 @@ class _SixPackScreenState extends State<SixPackScreen> {
     );
   }
 
-  // 4️⃣ INDICADOR DIREÇÃO
-  Widget _buildDirecao() {
+  // 4️⃣ BÚSSOLA
+  Widget _buildBussola() {
+    String cardinal = _getCardinalDirection(heading);
     return _buildInstrumento(
-      titulo: 'DIREÇÃO',
-      valor: '${heading.toInt()}',
-      unidade: '°',
+      titulo: 'BÚSSOLA',
+      valor: '${heading.toInt()}° ($cardinal)',
+      unidade: '',
       cor: Colors.purple,
       icone: Icons.explore,
+      fontSize: 36, // Valor um pouco menor para caber tudo
     );
   }
 
-  // 5️⃣ COORDENADOR CURVA
+  // 5️⃣ COORDENADOR DE CURVA
   Widget _buildCoordenador() {
     return _buildInstrumento(
-      titulo: 'COORDENADOR',
+      titulo: 'COORDENADOR DE CURVA',
       valor: 'Roll: ${roll.toInt()}°',
       unidade: '',
       cor: Colors.teal,
       icone: Icons.sync,
+      fontSize: 14, // Fonte menor para caber o título
     );
   }
 
@@ -192,6 +341,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
     required String unidade,
     required Color cor,
     required IconData icone,
+    double fontSize = 16,
   }) {
     return Container(
       margin: const EdgeInsets.all(4),
@@ -208,10 +358,11 @@ class _SixPackScreenState extends State<SixPackScreen> {
             titulo,
             style: TextStyle(
               color: cor,
-              fontSize: 16,
+              fontSize: fontSize,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.2,
             ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
 
@@ -227,17 +378,80 @@ class _SixPackScreenState extends State<SixPackScreen> {
               fontSize: 48,
               fontWeight: FontWeight.bold,
             ),
+            textAlign: TextAlign.center,
           ),
 
           // Unidade
-          Text(
-            unidade,
-            style: TextStyle(
-              color: Colors.grey.shade400,
-              fontSize: 20,
-              fontWeight: FontWeight.w500,
+          if (unidade.isNotEmpty)
+            Text(
+              unidade,
+              style: TextStyle(
+                color: Colors.grey.shade400,
+                fontSize: 20,
+                fontWeight: FontWeight.w500,
+              ),
             ),
+        ],
+      ),
+    );
+  }
+
+  // Widget compacto para página de telemetria (menor)
+  Widget _buildInstrumentoCompacto({
+    required String titulo,
+    required String valor,
+    required String unidade,
+    required Color cor,
+    required IconData icone,
+  }) {
+    return Container(
+      margin: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade900,
+        border: Border.all(color: cor, width: 2),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Título
+          Text(
+            titulo,
+            style: TextStyle(
+              color: cor,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
+            textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 4),
+
+          // Ícone menor
+          Icon(icone, color: cor, size: 24),
+          const SizedBox(height: 8),
+
+          // Valor menor
+          Text(
+            valor,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          // Unidade
+          if (unidade.isNotEmpty)
+            Text(
+              unidade,
+              style: TextStyle(
+                color: Colors.grey.shade400,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
         ],
       ),
     );
