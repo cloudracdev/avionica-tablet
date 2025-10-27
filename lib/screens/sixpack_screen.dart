@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import '../utils/websocket_service.dart';
+import '../utils/calibration_service.dart';
+import '../widgets/calibration_dialog.dart';
 
 class SixPackScreen extends StatefulWidget {
   final WebSocketService wsService;
@@ -13,13 +15,12 @@ class SixPackScreen extends StatefulWidget {
 }
 
 class _SixPackScreenState extends State<SixPackScreen> {
-  // Subscription do WebSocket
   StreamSubscription? _subscription;
-  
-  // PageView controller
   final PageController _pageController = PageController();
+  final CalibrationService _calib = CalibrationService();
   
-  // Dados dos instrumentos
+  double _rawV = 0, _rawA = 0, _rawH = 0, _rawP = 0, _rawR = 0, _rawVa = 0;
+  
   double velocidade = 0;
   double altitude = 0;
   double heading = 0;
@@ -41,16 +42,23 @@ class _SixPackScreenState extends State<SixPackScreen> {
       DeviceOrientation.landscapeRight,
     ]);
 
-    // Escutar dados do WebSocket
     _subscription = widget.wsService.dataStream.listen((data) {
       if (mounted) {
         setState(() {
-          velocidade = data['velocidade']?.toDouble() ?? 0.0;
-          altitude = data['altitude']?.toDouble() ?? 0.0;
-          heading = data['heading']?.toDouble() ?? 0.0;
-          pitch = data['pitch']?.toDouble() ?? 0.0;
-          roll = data['roll']?.toDouble() ?? 0.0;
-          vario = data['vario']?.toDouble() ?? 0.0;
+          _rawV = data['velocidade']?.toDouble() ?? 0.0;
+          _rawA = data['altitude']?.toDouble() ?? 0.0;
+          _rawH = data['heading']?.toDouble() ?? 0.0;
+          _rawP = data['pitch']?.toDouble() ?? 0.0;
+          _rawR = data['roll']?.toDouble() ?? 0.0;
+          _rawVa = data['vario']?.toDouble() ?? 0.0;
+          
+          velocidade = _rawV;
+          altitude = _calib.applyCalibratedAltitude(_rawA);
+          heading = _calib.applyCalibratedHeading(_rawH);
+          pitch = _calib.applyCalibratedPitch(_rawP);
+          roll = _calib.applyCalibratedRoll(_rawR);
+          vario = _rawVa;
+          
           temperatura = data['temperatura']?.toDouble() ?? 0.0;
           pressao = data['pressao']?.toDouble() ?? 0.0;
           lat = data['lat']?.toDouble() ?? 0.0;
@@ -74,7 +82,6 @@ class _SixPackScreenState extends State<SixPackScreen> {
     super.dispose();
   }
 
-  // Converter heading em direção cardinal
   String _getCardinalDirection(double degrees) {
     if (degrees >= 337.5 || degrees < 22.5) return 'N';
     if (degrees >= 22.5 && degrees < 67.5) return 'NE';
@@ -84,6 +91,25 @@ class _SixPackScreenState extends State<SixPackScreen> {
     if (degrees >= 202.5 && degrees < 247.5) return 'SO';
     if (degrees >= 247.5 && degrees < 292.5) return 'O';
     return 'NO';
+  }
+
+  void _openCalibrationDialog() {
+    if (_rawH == 0 && _rawP == 0 && _rawA == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('⚠️ Aguarde dados chegarem!'), duration: Duration(seconds: 2)),
+      );
+      return;
+    }
+    showDialog(
+      context: context,
+      builder: (context) => CalibrationDialog(
+        calibrationService: _calib,
+        currentHeading: _rawH,
+        currentPitch: _rawP,
+        currentRoll: _rawR,
+        currentAltitude: _rawA,
+      ),
+    );
   }
 
   @override
@@ -101,45 +127,60 @@ class _SixPackScreenState extends State<SixPackScreen> {
             ],
           ),
 
-          // Botão desconectar
+          // Botões
           Positioned(
             top: 16,
             right: 16,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                widget.wsService.disconnect();
-                Navigator.pop(context);
-              },
-              icon: const Icon(Icons.close, size: 16),
-              label: const Text('Desconectar'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade800,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
+            child: Row(
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _openCalibrationDialog,
+                  icon: const Icon(Icons.tune, size: 16),
+                  label: const Text('Calibrar'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue.shade700,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    widget.wsService.disconnect();
+                    Navigator.pop(context);
+                  },
+                  icon: const Icon(Icons.close, size: 16),
+                  label: const Text('Desconectar'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade800,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+              ],
             ),
           ),
 
           // Indicador de página
           Positioned(
-            bottom: 8,
+            bottom: 4,
             left: 0,
             right: 0,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 8,
-                  height: 8,
+                  width: 6,
+                  height: 6,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.5),
                     shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Container(
-                  width: 8,
-                  height: 8,
+                  width: 6,
+                  height: 6,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.5),
                     shape: BoxShape.circle,
@@ -185,79 +226,98 @@ class _SixPackScreenState extends State<SixPackScreen> {
   Widget _buildTelemetryPage() {
     return Column(
       children: [
-        // Mapa (futuro) - ocupa toda largura
+        // Mapa - TODA a tela horizontal
         Expanded(
-          flex: 3,
           child: Container(
-            margin: const EdgeInsets.only(top: 8, bottom: 4), // Apenas margem vertical
-            decoration: BoxDecoration(
-              color: Colors.grey.shade900,
-              border: Border.all(color: Colors.blue, width: 2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            width: double.infinity,
+            color: Colors.grey.shade900,
+            child: Stack(
               children: [
-                const Icon(Icons.map, color: Colors.blue, size: 64),
-                const SizedBox(height: 16),
-                const Text(
-                  '📍 MAPA',
-                  style: TextStyle(
-                    color: Colors.blue,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                // Border apenas
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.blue, width: 1),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  'Lat: ${lat.toStringAsFixed(6)}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                  ),
-                ),
-                Text(
-                  'Lng: ${lng.toStringAsFixed(6)}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
+                // Conteúdo centralizado
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.map, color: Colors.blue, size: 48),
+                      const SizedBox(height: 12),
+                      const Text(
+                        '📍 MAPA',
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Lat: ${lat.toStringAsFixed(9)}',
+                        style: const TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                      Text(
+                        'Lng: ${lng.toStringAsFixed(9)}',
+                        style: const TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
         ),
-        // Temperatura e Pressão - mais compactos
-        Expanded(
-          flex: 2,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 24), // Espaço para indicador
-            child: Row(
-              children: [
-                Expanded(
-                  child: RepaintBoundary(
-                    child: _buildInstrumentoCompacto(
-                      titulo: 'TEMPERATURA',
-                      valor: '${temperatura.toStringAsFixed(1)}',
-                      unidade: '°C',
-                      cor: Colors.red,
-                      icone: Icons.thermostat,
-                    ),
+        // Temperatura e Pressão - altura mínima 70px
+        SizedBox(
+          height: 70,
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.all(1),
+                  color: Colors.grey.shade900,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'TEMP',
+                        style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${temperatura.toStringAsFixed(1)}°C',
+                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
                 ),
-                Expanded(
-                  child: RepaintBoundary(
-                    child: _buildInstrumentoCompacto(
-                      titulo: 'PRESSÃO',
-                      valor: '${(pressao / 100).toStringAsFixed(0)}',
-                      unidade: 'hPa',
-                      cor: Colors.purple,
-                      icone: Icons.compress,
-                    ),
+              ),
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.all(1),
+                  color: Colors.grey.shade900,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'PRESSÃO',
+                        style: TextStyle(color: Colors.purple, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${(pressao / 100).toStringAsFixed(0)} hPa',
+                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],
@@ -268,7 +328,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
   Widget _buildVelocimetro() {
     return _buildInstrumento(
       titulo: 'VELOCIDADE',
-      valor: '${velocidade.toInt()}',
+      valor: '${velocidade.toStringAsFixed(3)}',
       unidade: 'km/h',
       cor: Colors.green,
       icone: Icons.speed,
@@ -291,7 +351,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
   Widget _buildAltimetro() {
     return _buildInstrumento(
       titulo: 'ALTITUDE',
-      valor: '${altitude.toInt()}',
+      valor: '${altitude.toStringAsFixed(3)}',
       unidade: 'm',
       cor: Colors.orange,
       icone: Icons.height,
@@ -327,7 +387,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
   Widget _buildVariometro() {
     return _buildInstrumento(
       titulo: 'VARIÔMETRO',
-      valor: vario > 0 ? '+${vario.toStringAsFixed(1)}' : vario.toStringAsFixed(1),
+      valor: vario > 0 ? '+${vario.toStringAsFixed(3)}' : vario.toStringAsFixed(3),
       unidade: 'm/s',
       cor: vario > 0 ? Colors.green : Colors.red,
       icone: vario > 0 ? Icons.arrow_upward : Icons.arrow_downward,
