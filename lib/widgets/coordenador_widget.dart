@@ -107,58 +107,128 @@ class CoordenadorPainter extends CustomPainter {
       ..strokeWidth = 2;
     canvas.drawCircle(center, radius, borderPaint);
 
-    // AGULHA (Bank Angle) - 30° roll = marca lateral
-    double needleAngle = (roll / 30.0).clamp(-1.0, 1.0);
-    
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(needleAngle * pi / 6);
-
-    final needlePaint = Paint()
-      ..color = Colors.yellow
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round
+    // LINHAS DE REFERÊNCIA (horizonte e ângulos)
+    final horizonPaint = Paint()
+      ..color = Colors.white.withOpacity(0.3)
+      ..strokeWidth = 1
       ..style = PaintingStyle.stroke;
-
+    
+    // Linha horizontal central (0°/180°)
     canvas.drawLine(
-      Offset(0, radius * 0.2),
-      Offset(0, -radius * 0.7),
-      needlePaint,
+      Offset(center.dx - radius * 0.6, center.dy),
+      Offset(center.dx + radius * 0.6, center.dy),
+      horizonPaint,
     );
 
-    canvas.restore();
+    // Linhas diagonais de referência (~30° e ~330°)
+    final double angle30 = 30 * pi / 180;
+    canvas.drawLine(
+      Offset(center.dx - radius * 0.5 * cos(angle30), center.dy - radius * 0.5 * sin(angle30)),
+      Offset(center.dx - radius * 0.6 * cos(angle30), center.dy - radius * 0.6 * sin(angle30)),
+      horizonPaint,
+    );
+    
+    canvas.drawLine(
+      Offset(center.dx + radius * 0.5 * cos(angle30), center.dy - radius * 0.5 * sin(angle30)),
+      Offset(center.dx + radius * 0.6 * cos(angle30), center.dy - radius * 0.6 * sin(angle30)),
+      horizonPaint,
+    );
 
-    // MARCAS L/R
+    // MARCAS L/R (Standard Rate Turn - verticais nas laterais)
     final markPaint = Paint()
       ..color = Colors.white
-      ..strokeWidth = 2
+      ..strokeWidth = 3
       ..style = PaintingStyle.stroke;
 
+    // Marca L (esquerda)
     canvas.drawLine(
-      Offset(center.dx - radius * 0.7, center.dy),
-      Offset(center.dx - radius * 0.85, center.dy),
+      Offset(center.dx - radius * 0.65, center.dy - radius * 0.08),
+      Offset(center.dx - radius * 0.65, center.dy + radius * 0.08),
       markPaint,
     );
 
+    // Marca R (direita)
     canvas.drawLine(
-      Offset(center.dx + radius * 0.7, center.dy),
-      Offset(center.dx + radius * 0.85, center.dy),
+      Offset(center.dx + radius * 0.65, center.dy - radius * 0.08),
+      Offset(center.dx + radius * 0.65, center.dy + radius * 0.08),
       markPaint,
     );
 
-    // BOLINHA (Slip/Skid)
+    // SILHUETA DO AVIÃO (vista de trás)
+    _drawAirplaneSilhouette(canvas, center, radius);
+
+    // INCLINÔMETRO (Ball) - parte inferior
+    _drawInclinometer(canvas, center, radius);
+
+    // Texto L/R (próximo da borda, mais abaixo)
+    _drawText(canvas, 'L', Offset(center.dx - radius * 0.78, center.dy + radius * 0.12));
+    _drawText(canvas, 'R', Offset(center.dx + radius * 0.78, center.dy + radius * 0.12));
+  }
+
+  void _drawAirplaneSilhouette(Canvas canvas, Offset center, double radius) {
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    
+    // Rotacionar de acordo com o roll (SEM sinal negativo para sincronizar com horizonte)
+    canvas.rotate(roll * pi / 180);
+
+    final planePaint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 4
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    // Dimensões do avião
+    double wingspan = radius * 0.5;
+    double fuselageWidth = radius * 0.06;
+    double fuselageHeight = radius * 0.18;
+    double tailWidth = radius * 0.18;
+
+    // ASAS (linha horizontal principal - bem visível)
+    canvas.drawLine(
+      Offset(-wingspan, 0),
+      Offset(wingspan, 0),
+      planePaint,
+    );
+
+    // FUSELAGEM (linha vertical central)
+    canvas.drawLine(
+      Offset(0, fuselageHeight / 2),
+      Offset(0, -fuselageHeight),
+      planePaint,
+    );
+
+    // ESTABILIZADOR HORIZONTAL (cauda em T)
+    canvas.drawLine(
+      Offset(-tailWidth / 2, -fuselageHeight),
+      Offset(tailWidth / 2, -fuselageHeight),
+      planePaint,
+    );
+
+    // CENTRO (ponto de referência)
+    final centerPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(0, 0), radius * 0.04, centerPaint);
+
+    canvas.restore();
+  }
+
+  void _drawInclinometer(Canvas canvas, Offset center, double radius) {
+    // Calcular deslocamento lateral da bolinha
     double rollRad = roll * pi / 180;
     double lateralAccel = accelY * cos(rollRad) + accelX * sin(rollRad);
     double ballOffset = (lateralAccel / 1.0).clamp(-1.0, 1.0) * radius * 0.3;
 
-    // Trilho
+    // Trilho (tubo curvo)
     final trackPaint = Paint()
       ..color = Colors.grey.shade600
       ..style = PaintingStyle.fill;
 
     final trackRect = RRect.fromRectAndRadius(
       Rect.fromCenter(
-        center: Offset(center.dx, center.dy + radius * 0.5),
+        center: Offset(center.dx, center.dy + radius * 0.55),
         width: radius * 0.8,
         height: radius * 0.15,
       ),
@@ -166,38 +236,34 @@ class CoordenadorPainter extends CustomPainter {
     );
     canvas.drawRRect(trackRect, trackPaint);
 
-    // Bolinha
+    // Bolinha preta
     final ballPaint = Paint()
-      ..color = Colors.white
+      ..color = Colors.black
       ..style = PaintingStyle.fill;
 
     canvas.drawCircle(
-      Offset(center.dx + ballOffset, center.dy + radius * 0.5),
+      Offset(center.dx + ballOffset, center.dy + radius * 0.55),
       radius * 0.08,
       ballPaint,
     );
 
-    // Marcas de referência
+    // Marcas de referência (limites de coordenação)
     final refPaint = Paint()
-      ..color = Colors.teal
+      ..color = Colors.white
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
     canvas.drawLine(
-      Offset(center.dx - radius * 0.15, center.dy + radius * 0.42),
-      Offset(center.dx - radius * 0.15, center.dy + radius * 0.58),
+      Offset(center.dx - radius * 0.15, center.dy + radius * 0.47),
+      Offset(center.dx - radius * 0.15, center.dy + radius * 0.63),
       refPaint,
     );
 
     canvas.drawLine(
-      Offset(center.dx + radius * 0.15, center.dy + radius * 0.42),
-      Offset(center.dx + radius * 0.15, center.dy + radius * 0.58),
+      Offset(center.dx + radius * 0.15, center.dy + radius * 0.47),
+      Offset(center.dx + radius * 0.15, center.dy + radius * 0.63),
       refPaint,
     );
-
-    // Texto L/R
-    _drawText(canvas, 'L', Offset(center.dx - radius * 0.85, center.dy - 20));
-    _drawText(canvas, 'R', Offset(center.dx + radius * 0.85, center.dy - 20));
   }
 
   void _drawText(Canvas canvas, String text, Offset position) {
@@ -206,7 +272,7 @@ class CoordenadorPainter extends CustomPainter {
         text: text,
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 14,
+          fontSize: 16,
           fontWeight: FontWeight.bold,
         ),
       ),
