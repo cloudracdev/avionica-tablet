@@ -22,7 +22,14 @@ class _SixPackScreenState extends State<SixPackScreen> {
   final CalibrationService _calib = CalibrationService();
   final SmoothingService _smooth = SmoothingService();
   
-  double _rawV = 0, _rawA = 0, _rawH = 0, _rawP = 0, _rawR = 0, _rawVa = 0;
+  double _rawV = 0, _rawA = 0, _rawH = 0, _rawP = 0, _rawR = 0;
+  
+  // Para cálculo do variômetro (CALCULADO LOCALMENTE)
+  double _altitudePrevious = 0;
+  int _timePrevious = 0;
+  bool _firstVarioCalc = true;
+  double _varioSmooth = 0;
+  final double _varioAlpha = 0.2; // Filtro EMA
   
   double velocidade = 0;
   double altitude = 0;
@@ -39,7 +46,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
   void initState() {
     super.initState();
 
-    // Forçar orientação horizontal
+    // ForÃ§ar orientaÃ§Ã£o horizontal
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
@@ -55,33 +62,53 @@ class _SixPackScreenState extends State<SixPackScreen> {
             'heading': data['heading']?.toDouble() ?? 0.0,
             'pitch': data['pitch']?.toDouble() ?? 0.0,
             'roll': data['roll']?.toDouble() ?? 0.0,
-            'vario': data['vario']?.toDouble() ?? 0.0,
             'temperatura': data['temperatura']?.toDouble() ?? 0.0,
             'pressao': data['pressao']?.toDouble() ?? 0.0,
             'lat': data['lat']?.toDouble() ?? 0.0,
             'lng': data['lng']?.toDouble() ?? 0.0,
           };
           
-          // 2. Aplicar suavização (EMA + Dead Zone)
+          // 2. Aplicar suavizaÃ§Ã£o (EMA + Dead Zone)
           Map<String, double> smoothData = _smooth.smoothData(rawData);
           
-          // 3. Armazenar valores RAW suavizados (para calibração)
+          // 3. Armazenar valores RAW suavizados (para calibraÃ§Ã£o)
           _rawV = smoothData['velocidade']!;
           _rawA = smoothData['altitude']!;
           _rawH = smoothData['heading']!;
           _rawP = smoothData['pitch']!;
           _rawR = smoothData['roll']!;
-          _rawVa = smoothData['vario']!;
           
-          // 4. Aplicar calibração nos valores suavizados
+          // 4. Aplicar calibraÃ§Ã£o nos valores suavizados
           velocidade = _rawV;
           altitude = _calib.applyCalibratedAltitude(_rawA);
           heading = _calib.applyCalibratedHeading(_rawH);
           pitch = _calib.applyCalibratedPitch(_rawP);
           roll = _calib.applyCalibratedRoll(_rawR);
-          vario = _rawVa;
           
-          // 5. Dados extras (já suavizados)
+          // 5. CALCULAR VARIÔMETRO (m/s) baseado na altitude calibrada
+          int timeNow = DateTime.now().millisecondsSinceEpoch;
+          
+          if (_firstVarioCalc) {
+            _altitudePrevious = altitude;
+            _timePrevious = timeNow;
+            _varioSmooth = 0;
+            _firstVarioCalc = false;
+            vario = 0;
+          } else {
+            double deltaAltitude = altitude - _altitudePrevious;
+            int deltaTime = timeNow - _timePrevious;
+            
+            if (deltaTime > 0) {
+              double varioInstant = (deltaAltitude * 1000.0) / deltaTime; // m/s
+              _varioSmooth = _varioAlpha * varioInstant + (1 - _varioAlpha) * _varioSmooth;
+              vario = _varioSmooth;
+              
+              _altitudePrevious = altitude;
+              _timePrevious = timeNow;
+            }
+          }
+          
+          // 6. Dados extras (jÃ¡ suavizados)
           temperatura = smoothData['temperatura']!;
           pressao = smoothData['pressao']!;
           lat = smoothData['lat']!;
@@ -119,7 +146,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
   void _openCalibrationDialog() {
     if (_rawH == 0 && _rawP == 0 && _rawA == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('⚠️ Aguarde dados chegarem!'), duration: Duration(seconds: 2)),
+        const SnackBar(content: Text('âš ï¸ Aguarde dados chegarem!'), duration: Duration(seconds: 2)),
       );
       return;
     }
@@ -141,7 +168,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // PageView com 2 páginas
+          // PageView com 2 pÃ¡ginas
           PageView(
             controller: _pageController,
             children: [
@@ -150,7 +177,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
             ],
           ),
 
-          // Botões
+          // BotÃµes
           Positioned(
             top: 16,
             right: 16,
@@ -184,7 +211,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
             ),
           ),
 
-          // Indicador de página
+          // Indicador de pÃ¡gina
           Positioned(
             bottom: 4,
             left: 0,
@@ -217,7 +244,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
     );
   }
 
-  // PÁGINA 1: SIX-PACK
+  // PÃGINA 1: SIX-PACK
   Widget _buildSixPackPage() {
     return Column(
       children: [
@@ -245,7 +272,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
     );
   }
 
-  // PÁGINA 2: TELEMETRIA EXTRA
+  // PÃGINA 2: TELEMETRIA EXTRA
   Widget _buildTelemetryPage() {
     return Column(
       children: [
@@ -264,7 +291,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
                     ),
                   ),
                 ),
-                // Conteúdo centralizado
+                // ConteÃºdo centralizado
                 Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -272,7 +299,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
                       const Icon(Icons.map, color: Colors.blue, size: 48),
                       const SizedBox(height: 12),
                       const Text(
-                        '📍 MAPA',
+                        'ðŸ“ MAPA',
                         style: TextStyle(
                           color: Colors.blue,
                           fontSize: 20,
@@ -295,7 +322,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
             ),
           ),
         ),
-        // Temperatura e Pressão - altura mínima 70px
+        // Temperatura e PressÃ£o - altura mÃ­nima 70px
         SizedBox(
           height: 70,
           child: Row(
@@ -328,7 +355,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text(
-                        'PRESSÃO',
+                        'PRESSÃƒO',
                         style: TextStyle(color: Colors.purple, fontSize: 10, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 2),
@@ -347,7 +374,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
     );
   }
 
-  // 1️⃣ VELOCÍMETRO
+  // 1ï¸âƒ£ VELOCÃMETRO
   Widget _buildVelocimetro() {
     return _buildInstrumento(
       titulo: 'VELOCIDADE',
@@ -358,7 +385,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
     );
   }
 
-  // 2️⃣ HORIZONTE ARTIFICIAL
+  // 2ï¸âƒ£ HORIZONTE ARTIFICIAL
   Widget _buildHorizonte() {
     return ArtificialHorizon(
       pitch: pitch,
@@ -366,7 +393,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
     );
   }
 
-  // 3️⃣ ALTÍMETRO
+  // 3ï¸âƒ£ ALTÃMETRO
   Widget _buildAltimetro() {
     return _buildInstrumento(
       titulo: 'ALTITUDE',
@@ -377,7 +404,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
     );
   }
 
-  // 4️⃣ BÚSSOLA
+  // 4ï¸âƒ£ BÚSSOLA
   Widget _buildBussola() {
     String cardinal = _getCardinalDirection(heading);
     return _buildInstrumento(
@@ -390,7 +417,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
     );
   }
 
-  // 5️⃣ COORDENADOR DE CURVA
+  // 5ï¸âƒ£ COORDENADOR DE CURVA
   Widget _buildCoordenador() {
     return _buildInstrumento(
       titulo: 'COORDENADOR DE CURVA',
@@ -402,7 +429,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
     );
   }
 
-  // 6️⃣ VARIÔMETRO
+  // 6ï¸âƒ£ VARIÃ”METRO
   Widget _buildVariometro() {
     return _buildInstrumento(
       titulo: 'VARIÔMETRO',
@@ -432,7 +459,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Título
+          // TÃ­tulo
           Text(
             titulo,
             style: TextStyle(
@@ -445,7 +472,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
           ),
           const SizedBox(height: 8),
 
-          // Ícone
+          // Ãcone
           Icon(icone, color: cor, size: 32),
           const SizedBox(height: 12),
 
@@ -475,7 +502,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
     );
   }
 
-  // Widget compacto para página de telemetria (menor)
+  // Widget compacto para pÃ¡gina de telemetria (menor)
   Widget _buildInstrumentoCompacto({
     required String titulo,
     required String valor,
@@ -493,7 +520,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Título
+          // TÃ­tulo
           Text(
             titulo,
             style: TextStyle(
@@ -506,7 +533,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
           ),
           const SizedBox(height: 4),
 
-          // Ícone menor
+          // Ãcone menor
           Icon(icone, color: cor, size: 24),
           const SizedBox(height: 8),
 
