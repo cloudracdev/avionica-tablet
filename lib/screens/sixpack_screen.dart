@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 import '../utils/websocket_service.dart';
 import '../utils/calibration_service.dart';
+import '../utils/smoothing_service.dart';
 import '../widgets/calibration_dialog.dart';
+import '../widgets/artificial_horizon.dart';
 
 class SixPackScreen extends StatefulWidget {
   final WebSocketService wsService;
@@ -18,6 +20,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
   StreamSubscription? _subscription;
   final PageController _pageController = PageController();
   final CalibrationService _calib = CalibrationService();
+  final SmoothingService _smooth = SmoothingService();
   
   double _rawV = 0, _rawA = 0, _rawH = 0, _rawP = 0, _rawR = 0, _rawVa = 0;
   
@@ -45,13 +48,32 @@ class _SixPackScreenState extends State<SixPackScreen> {
     _subscription = widget.wsService.dataStream.listen((data) {
       if (mounted) {
         setState(() {
-          _rawV = data['velocidade']?.toDouble() ?? 0.0;
-          _rawA = data['altitude']?.toDouble() ?? 0.0;
-          _rawH = data['heading']?.toDouble() ?? 0.0;
-          _rawP = data['pitch']?.toDouble() ?? 0.0;
-          _rawR = data['roll']?.toDouble() ?? 0.0;
-          _rawVa = data['vario']?.toDouble() ?? 0.0;
+          // 1. Converter dados recebidos para formato do smoothing
+          Map<String, double> rawData = {
+            'velocidade': data['velocidade']?.toDouble() ?? 0.0,
+            'altitude': data['altitude']?.toDouble() ?? 0.0,
+            'heading': data['heading']?.toDouble() ?? 0.0,
+            'pitch': data['pitch']?.toDouble() ?? 0.0,
+            'roll': data['roll']?.toDouble() ?? 0.0,
+            'vario': data['vario']?.toDouble() ?? 0.0,
+            'temperatura': data['temperatura']?.toDouble() ?? 0.0,
+            'pressao': data['pressao']?.toDouble() ?? 0.0,
+            'lat': data['lat']?.toDouble() ?? 0.0,
+            'lng': data['lng']?.toDouble() ?? 0.0,
+          };
           
+          // 2. Aplicar suavização (EMA + Dead Zone)
+          Map<String, double> smoothData = _smooth.smoothData(rawData);
+          
+          // 3. Armazenar valores RAW suavizados (para calibração)
+          _rawV = smoothData['velocidade']!;
+          _rawA = smoothData['altitude']!;
+          _rawH = smoothData['heading']!;
+          _rawP = smoothData['pitch']!;
+          _rawR = smoothData['roll']!;
+          _rawVa = smoothData['vario']!;
+          
+          // 4. Aplicar calibração nos valores suavizados
           velocidade = _rawV;
           altitude = _calib.applyCalibratedAltitude(_rawA);
           heading = _calib.applyCalibratedHeading(_rawH);
@@ -59,10 +81,11 @@ class _SixPackScreenState extends State<SixPackScreen> {
           roll = _calib.applyCalibratedRoll(_rawR);
           vario = _rawVa;
           
-          temperatura = data['temperatura']?.toDouble() ?? 0.0;
-          pressao = data['pressao']?.toDouble() ?? 0.0;
-          lat = data['lat']?.toDouble() ?? 0.0;
-          lng = data['lng']?.toDouble() ?? 0.0;
+          // 5. Dados extras (já suavizados)
+          temperatura = smoothData['temperatura']!;
+          pressao = smoothData['pressao']!;
+          lat = smoothData['lat']!;
+          lng = smoothData['lng']!;
         });
       }
     });
@@ -337,13 +360,9 @@ class _SixPackScreenState extends State<SixPackScreen> {
 
   // 2️⃣ HORIZONTE ARTIFICIAL
   Widget _buildHorizonte() {
-    return _buildInstrumento(
-      titulo: 'HORIZONTE ARTIFICIAL',
-      valor: 'P:${pitch.toInt()}° R:${roll.toInt()}°',
-      unidade: '',
-      cor: Colors.blue,
-      icone: Icons.airplanemode_active,
-      fontSize: 14, // Fonte menor para caber o título
+    return ArtificialHorizon(
+      pitch: pitch,
+      roll: roll,
     );
   }
 
