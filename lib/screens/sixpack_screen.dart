@@ -6,6 +6,11 @@ import '../utils/calibration_service.dart';
 import '../utils/smoothing_service.dart';
 import '../widgets/calibration_dialog.dart';
 import '../widgets/artificial_horizon.dart';
+import '../widgets/velocimetro_widget.dart';
+import '../widgets/altimetro_widget.dart';
+import '../widgets/bussola_widget.dart';
+import '../widgets/coordenador_widget.dart';
+import '../widgets/variometro_widget.dart';
 
 class SixPackScreen extends StatefulWidget {
   final WebSocketService wsService;
@@ -41,12 +46,22 @@ class _SixPackScreenState extends State<SixPackScreen> {
   double pressao = 0;
   double lat = 0;
   double lng = 0;
+  
+  // Dados para coordenador de curva
+  double gyroZ = 0;
+  double accelX = 0;
+  double accelY = 0;
+  
+  // Offsets de calibração (ajustar quando parado)
+  double _gyroZOffset = 0;
+  double _accelXOffset = 0;
+  double _accelYOffset = 0;
 
   @override
   void initState() {
     super.initState();
 
-    // ForÃ§ar orientaÃ§Ã£o horizontal
+    // Forçar orientação horizontal
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
@@ -54,6 +69,43 @@ class _SixPackScreenState extends State<SixPackScreen> {
 
     _subscription = widget.wsService.dataStream.listen((data) {
       if (mounted) {
+        // DEBUG: Mostrar dados formatados no console
+        print('\n' + '='*60);
+        print('📥 DADOS DO ESP32:');
+        print('='*60);
+        print('🎯 INSTRUMENTOS PRINCIPAIS:');
+        print('   Velocidade: ${data['velocidade']} km/h');
+        print('   Altitude: ${data['altitude']} m (${data['altitude_ft']} ft)');
+        print('   Heading: ${data['heading']}°');
+        print('   Pitch: ${data['pitch']}°');
+        print('   Roll: ${data['roll']}°');
+        print('   Variômetro: ${data['variometro']} m/s (${data['variometro_ft']} ft/min)');
+        print('');
+        print('🌡️  AMBIENTE:');
+        print('   Temperatura: ${data['temperatura']}°C');
+        print('   Pressão: ${data['pressao']} Pa (${(data['pressao']/100).toStringAsFixed(0)} hPa)');
+        print('');
+        print('🛰️  GPS:');
+        print('   Lat: ${data['lat']}');
+        print('   Lng: ${data['lng']}');
+        print('   Satélites: ${data['satelites']}');
+        print('   HDOP: ${data['hdop']}');
+        print('');
+        print('🔄 GIROSCÓPIOS:');
+        print('   L3G4200D → X:${data['gyro_x']} Y:${data['gyro_y']} Z:${data['gyro_z']}');
+        print('   LSM6DS3  → X:${data['lsm_gx']}°/s Y:${data['lsm_gy']}°/s Z:${data['lsm_gz']}°/s');
+        print('');
+        print('📐 ACELERÔMETROS:');
+        print('   ADXL345  → X:${data['acel_x']} Y:${data['acel_y']} Z:${data['acel_z']}');
+        print('   LSM6DS3  → X:${data['lsm_ax']}g Y:${data['lsm_ay']}g Z:${data['lsm_az']}g');
+        print('');
+        print('🎛️  COORDENADOR DE CURVA (dados usados):');
+        print('   Roll (agulha): ${data['roll']}°');
+        print('   Accel X (bolinha): ${data['lsm_ax']}g');
+        print('   Accel Y (bolinha): ${data['lsm_ay']}g');
+        print('   Taxa Giro (ref): ${data['lsm_gz']}°/s');
+        print('='*60 + '\n');
+        
         setState(() {
           // 1. Converter dados recebidos para formato do smoothing
           Map<String, double> rawData = {
@@ -68,17 +120,17 @@ class _SixPackScreenState extends State<SixPackScreen> {
             'lng': data['lng']?.toDouble() ?? 0.0,
           };
           
-          // 2. Aplicar suavizaÃ§Ã£o (EMA + Dead Zone)
+          // 2. Aplicar suavização (EMA + Dead Zone)
           Map<String, double> smoothData = _smooth.smoothData(rawData);
           
-          // 3. Armazenar valores RAW suavizados (para calibraÃ§Ã£o)
+          // 3. Armazenar valores RAW suavizados (para calibração)
           _rawV = smoothData['velocidade']!;
           _rawA = smoothData['altitude']!;
           _rawH = smoothData['heading']!;
           _rawP = smoothData['pitch']!;
           _rawR = smoothData['roll']!;
           
-          // 4. Aplicar calibraÃ§Ã£o nos valores suavizados
+          // 4. Aplicar calibração nos valores suavizados
           velocidade = _rawV;
           altitude = _calib.applyCalibratedAltitude(_rawA);
           heading = _calib.applyCalibratedHeading(_rawH);
@@ -108,11 +160,21 @@ class _SixPackScreenState extends State<SixPackScreen> {
             }
           }
           
-          // 6. Dados extras (jÃ¡ suavizados)
+          // 6. Dados extras (já suavizados)
           temperatura = smoothData['temperatura']!;
           pressao = smoothData['pressao']!;
           lat = smoothData['lat']!;
           lng = smoothData['lng']!;
+          
+          // 7. Dados do coordenador de curva
+          double rawGyroZ = data['lsm_gz']?.toDouble() ?? 0.0;
+          double rawAccelX = data['lsm_ax']?.toDouble() ?? 0.0;
+          double rawAccelY = data['lsm_ay']?.toDouble() ?? 0.0;
+          
+          // Aplicar offsets de calibração
+          gyroZ = rawGyroZ - _gyroZOffset;
+          accelX = rawAccelX - _accelXOffset;
+          accelY = rawAccelY - _accelYOffset;
         });
       }
     });
@@ -132,21 +194,13 @@ class _SixPackScreenState extends State<SixPackScreen> {
     super.dispose();
   }
 
-  String _getCardinalDirection(double degrees) {
-    if (degrees >= 337.5 || degrees < 22.5) return 'N';
-    if (degrees >= 22.5 && degrees < 67.5) return 'NE';
-    if (degrees >= 67.5 && degrees < 112.5) return 'L';
-    if (degrees >= 112.5 && degrees < 157.5) return 'SE';
-    if (degrees >= 157.5 && degrees < 202.5) return 'S';
-    if (degrees >= 202.5 && degrees < 247.5) return 'SO';
-    if (degrees >= 247.5 && degrees < 292.5) return 'O';
-    return 'NO';
-  }
-
   void _openCalibrationDialog() {
     if (_rawH == 0 && _rawP == 0 && _rawA == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('âš ï¸ Aguarde dados chegarem!'), duration: Duration(seconds: 2)),
+        const SnackBar(
+          content: Text('⚠️ Aguarde dados chegarem!'), 
+          duration: Duration(seconds: 2)
+        ),
       );
       return;
     }
@@ -162,13 +216,27 @@ class _SixPackScreenState extends State<SixPackScreen> {
     );
   }
 
+  void _calibrarCoordenador() {
+    setState(() {
+      _gyroZOffset = gyroZ + _gyroZOffset;
+      _accelXOffset = accelX + _accelXOffset;
+      _accelYOffset = accelY + _accelYOffset;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('✅ Coordenador calibrado! (Agulha e bolinha zerados)'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // PageView com 2 pÃ¡ginas
+          // PageView com 2 páginas
           PageView(
             controller: _pageController,
             children: [
@@ -177,7 +245,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
             ],
           ),
 
-          // BotÃµes
+          // Botões
           Positioned(
             top: 16,
             right: 16,
@@ -189,6 +257,17 @@ class _SixPackScreenState extends State<SixPackScreen> {
                   label: const Text('Calibrar'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue.shade700,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: _calibrarCoordenador,
+                  icon: const Icon(Icons.center_focus_strong, size: 16),
+                  label: const Text('Zerar Coord'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal.shade700,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
@@ -211,7 +290,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
             ),
           ),
 
-          // Indicador de pÃ¡gina
+          // Indicador de página
           Positioned(
             bottom: 4,
             left: 0,
@@ -244,7 +323,9 @@ class _SixPackScreenState extends State<SixPackScreen> {
     );
   }
 
-  // PÃGINA 1: SIX-PACK
+  // ========================================
+  // PÁGINA 1: SIX-PACK
+  // ========================================
   Widget _buildSixPackPage() {
     return Column(
       children: [
@@ -252,9 +333,21 @@ class _SixPackScreenState extends State<SixPackScreen> {
         Expanded(
           child: Row(
             children: [
-              Expanded(child: RepaintBoundary(child: _buildVelocimetro())),
-              Expanded(child: RepaintBoundary(child: _buildHorizonte())),
-              Expanded(child: RepaintBoundary(child: _buildAltimetro())),
+              Expanded(
+                child: RepaintBoundary(
+                  child: VelocimetroWidget(velocidade: velocidade),
+                ),
+              ),
+              Expanded(
+                child: RepaintBoundary(
+                  child: ArtificialHorizon(pitch: pitch, roll: roll),
+                ),
+              ),
+              Expanded(
+                child: RepaintBoundary(
+                  child: AltimetroWidget(altitude: altitude),
+                ),
+              ),
             ],
           ),
         ),
@@ -262,9 +355,26 @@ class _SixPackScreenState extends State<SixPackScreen> {
         Expanded(
           child: Row(
             children: [
-              Expanded(child: RepaintBoundary(child: _buildBussola())),
-              Expanded(child: RepaintBoundary(child: _buildCoordenador())),
-              Expanded(child: RepaintBoundary(child: _buildVariometro())),
+              Expanded(
+                child: RepaintBoundary(
+                  child: CoordenadorWidget(
+                    roll: roll,
+                    turnRate: gyroZ,
+                    accelX: accelX,
+                    accelY: accelY,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: RepaintBoundary(
+                  child: BussolaWidget(heading: heading),
+                ),
+              ),
+              Expanded(
+                child: RepaintBoundary(
+                  child: VariometroWidget(vario: vario),
+                ),
+              ),
             ],
           ),
         ),
@@ -272,7 +382,9 @@ class _SixPackScreenState extends State<SixPackScreen> {
     );
   }
 
-  // PÃGINA 2: TELEMETRIA EXTRA
+  // ========================================
+  // PÁGINA 2: TELEMETRIA EXTRA
+  // ========================================
   Widget _buildTelemetryPage() {
     return Column(
       children: [
@@ -291,7 +403,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
                     ),
                   ),
                 ),
-                // ConteÃºdo centralizado
+                // Conteúdo centralizado
                 Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -299,7 +411,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
                       const Icon(Icons.map, color: Colors.blue, size: 48),
                       const SizedBox(height: 12),
                       const Text(
-                        'ðŸ“ MAPA',
+                        '🗺️ MAPA',
                         style: TextStyle(
                           color: Colors.blue,
                           fontSize: 20,
@@ -322,7 +434,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
             ),
           ),
         ),
-        // Temperatura e PressÃ£o - altura mÃ­nima 70px
+        // Temperatura e Pressão - altura mínima 70px
         SizedBox(
           height: 70,
           child: Row(
@@ -336,12 +448,20 @@ class _SixPackScreenState extends State<SixPackScreen> {
                     children: [
                       const Text(
                         'TEMP',
-                        style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '${temperatura.toStringAsFixed(1)}°C',
-                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -355,13 +475,21 @@ class _SixPackScreenState extends State<SixPackScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text(
-                        'PRESSÃƒO',
-                        style: TextStyle(color: Colors.purple, fontSize: 10, fontWeight: FontWeight.bold),
+                        'PRESSÃO',
+                        style: TextStyle(
+                          color: Colors.purple,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '${(pressao / 100).toStringAsFixed(0)} hPa',
-                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -371,195 +499,6 @@ class _SixPackScreenState extends State<SixPackScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  // 1ï¸âƒ£ VELOCÃMETRO
-  Widget _buildVelocimetro() {
-    return _buildInstrumento(
-      titulo: 'VELOCIDADE',
-      valor: '${velocidade.toStringAsFixed(3)}',
-      unidade: 'km/h',
-      cor: Colors.green,
-      icone: Icons.speed,
-    );
-  }
-
-  // 2ï¸âƒ£ HORIZONTE ARTIFICIAL
-  Widget _buildHorizonte() {
-    return ArtificialHorizon(
-      pitch: pitch,
-      roll: roll,
-    );
-  }
-
-  // 3ï¸âƒ£ ALTÃMETRO
-  Widget _buildAltimetro() {
-    return _buildInstrumento(
-      titulo: 'ALTITUDE',
-      valor: '${altitude.toStringAsFixed(3)}',
-      unidade: 'm',
-      cor: Colors.orange,
-      icone: Icons.height,
-    );
-  }
-
-  // 4ï¸âƒ£ BÚSSOLA
-  Widget _buildBussola() {
-    String cardinal = _getCardinalDirection(heading);
-    return _buildInstrumento(
-      titulo: 'BÚSSOLA',
-      valor: '${heading.toInt()}° ($cardinal)',
-      unidade: '',
-      cor: Colors.purple,
-      icone: Icons.explore,
-      fontSize: 36, // Valor um pouco menor para caber tudo
-    );
-  }
-
-  // 5ï¸âƒ£ COORDENADOR DE CURVA
-  Widget _buildCoordenador() {
-    return _buildInstrumento(
-      titulo: 'COORDENADOR DE CURVA',
-      valor: 'Roll: ${roll.toInt()}°',
-      unidade: '',
-      cor: Colors.teal,
-      icone: Icons.sync,
-      fontSize: 14, // Fonte menor para caber o título
-    );
-  }
-
-  // 6ï¸âƒ£ VARIÃ”METRO
-  Widget _buildVariometro() {
-    return _buildInstrumento(
-      titulo: 'VARIÔMETRO',
-      valor: vario > 0 ? '+${vario.toStringAsFixed(3)}' : vario.toStringAsFixed(3),
-      unidade: 'm/s',
-      cor: vario > 0 ? Colors.green : Colors.red,
-      icone: vario > 0 ? Icons.arrow_upward : Icons.arrow_downward,
-    );
-  }
-
-  // Widget base para instrumentos
-  Widget _buildInstrumento({
-    required String titulo,
-    required String valor,
-    required String unidade,
-    required Color cor,
-    required IconData icone,
-    double fontSize = 16,
-  }) {
-    return Container(
-      margin: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade900,
-        border: Border.all(color: cor, width: 2),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // TÃ­tulo
-          Text(
-            titulo,
-            style: TextStyle(
-              color: cor,
-              fontSize: fontSize,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-
-          // Ãcone
-          Icon(icone, color: cor, size: 32),
-          const SizedBox(height: 12),
-
-          // Valor principal
-          Text(
-            valor,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 48,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          // Unidade
-          if (unidade.isNotEmpty)
-            Text(
-              unidade,
-              style: TextStyle(
-                color: Colors.grey.shade400,
-                fontSize: 20,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  // Widget compacto para pÃ¡gina de telemetria (menor)
-  Widget _buildInstrumentoCompacto({
-    required String titulo,
-    required String valor,
-    required String unidade,
-    required Color cor,
-    required IconData icone,
-  }) {
-    return Container(
-      margin: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade900,
-        border: Border.all(color: cor, width: 2),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // TÃ­tulo
-          Text(
-            titulo,
-            style: TextStyle(
-              color: cor,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 4),
-
-          // Ãcone menor
-          Icon(icone, color: cor, size: 24),
-          const SizedBox(height: 8),
-
-          // Valor menor
-          Text(
-            valor,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          // Unidade
-          if (unidade.isNotEmpty)
-            Text(
-              unidade,
-              style: TextStyle(
-                color: Colors.grey.shade400,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-        ],
-      ),
     );
   }
 }

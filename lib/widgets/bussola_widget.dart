@@ -1,0 +1,36 @@
+import 'package:flutter/material.dart';
+import 'base_instrumento.dart';
+
+class BussolaWidget extends StatelessWidget {
+  final double heading;
+
+  const BussolaWidget({
+    Key? key,
+    required this.heading,
+  }) : super(key: key);
+
+  String _getCardinalDirection(double degrees) {
+    if (degrees >= 337.5 || degrees < 22.5) return 'N';
+    if (degrees >= 22.5 && degrees < 67.5) return 'NE';
+    if (degrees >= 67.5 && degrees < 112.5) return 'L';
+    if (degrees >= 112.5 && degrees < 157.5) return 'SE';
+    if (degrees >= 157.5 && degrees < 202.5) return 'S';
+    if (degrees >= 202.5 && degrees < 247.5) return 'SO';
+    if (degrees >= 247.5 && degrees < 292.5) return 'O';
+    return 'NO';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    String cardinal = _getCardinalDirection(heading);
+    
+    return BaseInstrumento(
+      titulo: 'BÚSSOLA',
+      valor: '${heading.toInt()}° ($cardinal)',
+      unidade: '',
+      cor: Colors.purple,
+      icone: Icons.explore,
+      fontSize: 36,
+    );
+  }
+}
