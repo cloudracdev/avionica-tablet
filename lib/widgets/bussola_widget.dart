@@ -71,25 +71,25 @@ class _BussolaWidgetState extends State<BussolaWidget> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text(
-            'BÚSSOLA',
-            style: TextStyle(
-              color: Colors.purple,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
+          const Padding(
+            padding: EdgeInsets.only(top: 4),
+            child: Text(
+              'BÚSSOLA',
+              style: TextStyle(
+                color: Colors.purple,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
-          const Icon(Icons.explore, color: Colors.purple, size: 24),
-          const SizedBox(height: 8),
           Expanded(
             child: Center(
               child: AspectRatio(
                 aspectRatio: 1,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(4),
                   child: CustomPaint(
                     painter: BussolaPainter(heading: _displayHeading),
                     child: Container(),
@@ -99,12 +99,12 @@ class _BussolaWidgetState extends State<BussolaWidget> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: 4),
             child: Text(
               '${_displayHeading.toInt()}° ($cardinal)',
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 12,
+                fontSize: 10,
                 fontWeight: FontWeight.bold,
               ),
             ),

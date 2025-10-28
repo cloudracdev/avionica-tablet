@@ -27,25 +27,25 @@ class CoordenadorWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text(
-            'COORDENADOR',
-            style: TextStyle(
-              color: Colors.teal,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
+          const Padding(
+            padding: EdgeInsets.only(top: 4),
+            child: Text(
+              'COORDENADOR',
+              style: TextStyle(
+                color: Colors.teal,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
-          const Icon(Icons.sync, color: Colors.teal, size: 24),
-          const SizedBox(height: 8),
           Expanded(
             child: Center(
               child: AspectRatio(
                 aspectRatio: 1,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(4),
                   child: CustomPaint(
                     painter: CoordenadorPainter(
                       roll: roll,
@@ -60,12 +60,12 @@ class CoordenadorWidget extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: 4),
             child: Text(
               'Roll: ${roll.toInt()}°',
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 12,
+                fontSize: 10,
                 fontWeight: FontWeight.bold,
               ),
             ),

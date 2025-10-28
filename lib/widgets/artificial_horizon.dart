@@ -24,21 +24,19 @@ class ArtificialHorizon extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Título
-          const Text(
-            'HORIZONTE ARTIFICIAL',
-            style: TextStyle(
-              color: Colors.blue,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
+          const Padding(
+            padding: EdgeInsets.only(top: 4),
+            child: Text(
+              'HORIZONTE ARTIFICIAL',
+              style: TextStyle(
+                color: Colors.blue,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
-
-          // Ícone avião
-          const Icon(Icons.airplanemode_active, color: Colors.blue, size: 24),
-          const SizedBox(height: 8),
 
           // Instrumento (CustomPaint)
           Expanded(
@@ -46,7 +44,7 @@ class ArtificialHorizon extends StatelessWidget {
               child: AspectRatio(
                 aspectRatio: 1,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(4),
                   child: CustomPaint(
                     painter: HorizonPainter(pitch: pitch, roll: roll),
                     child: Container(),
@@ -58,12 +56,12 @@ class ArtificialHorizon extends StatelessWidget {
 
           // Valores numéricos
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: 4),
             child: Text(
               'P:${pitch.toInt()}° R:${roll.toInt()}°',
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 16,
+                fontSize: 10,
                 fontWeight: FontWeight.bold,
               ),
             ),

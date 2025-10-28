@@ -31,41 +31,46 @@ class BaseInstrumento extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Título
-          Text(
-            titulo,
-            style: TextStyle(
-              color: cor,
-              fontSize: fontSize,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              titulo,
+              style: TextStyle(
+                color: cor,
+                fontSize: fontSize,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          
+          const SizedBox(height: 16),
 
-          // Ícone
-          Icon(icone, color: cor, size: 32),
-          const SizedBox(height: 12),
-
-          // Valor principal
+          // Valor principal (maior)
           Text(
             valor,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 48,
+              fontSize: 56,
               fontWeight: FontWeight.bold,
             ),
             textAlign: TextAlign.center,
           ),
 
+          const SizedBox(height: 8),
+
           // Unidade
           if (unidade.isNotEmpty)
-            Text(
-              unidade,
-              style: TextStyle(
-                color: Colors.grey.shade400,
-                fontSize: 20,
-                fontWeight: FontWeight.w500,
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                unidade,
+                style: TextStyle(
+                  color: Colors.grey.shade400,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
         ],
