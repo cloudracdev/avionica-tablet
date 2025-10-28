@@ -12,6 +12,8 @@ class SmoothingService {
   double _smoothPressao = 0;
   double _smoothLat = 0;
   double _smoothLng = 0;
+  double _smoothAccelX = 0;
+  double _smoothAccelY = 0;
 
   // Primeira leitura (não suavizar no início)
   bool _firstReading = true;
@@ -69,6 +71,8 @@ class SmoothingService {
       _smoothPressao = rawData['pressao'] ?? 0;
       _smoothLat = rawData['lat'] ?? 0;
       _smoothLng = rawData['lng'] ?? 0;
+      _smoothAccelX = rawData['acel_x'] ?? 0;
+      _smoothAccelY = rawData['acel_y'] ?? 0;
       _firstReading = false;
       return rawData;
     }
@@ -144,6 +148,20 @@ class SmoothingService {
       0.00001  // deadZone: ~1 metro
     );
 
+    _smoothAccelX = _smooth(
+      rawData['acel_x'] ?? _smoothAccelX,
+      _smoothAccelX,
+      0.10,  // alpha: suave para bolinha não tremer
+      0.0    // deadZone: sem dead zone, responde a tudo
+    );
+
+    _smoothAccelY = _smooth(
+      rawData['acel_y'] ?? _smoothAccelY,
+      _smoothAccelY,
+      0.10,  // alpha: suave para bolinha não tremer
+      0.0    // deadZone: sem dead zone, responde a tudo
+    );
+
     // Retornar dados suavizados
     return {
       'velocidade': _smoothVelocidade,
@@ -156,6 +174,8 @@ class SmoothingService {
       'pressao': _smoothPressao,
       'lat': _smoothLat,
       'lng': _smoothLng,
+      'acel_x': _smoothAccelX,
+      'acel_y': _smoothAccelY,
     };
   }
 
