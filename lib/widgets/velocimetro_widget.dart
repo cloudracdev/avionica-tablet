@@ -112,13 +112,17 @@ class VelocimetroPainter extends CustomPainter {
     final bgPaint = Paint()..color = const Color(0xFF0A0A0A);
     canvas.drawCircle(center, radius * 0.90, bgPaint);
 
-    // Desenhar arcos coloridos e linha branca
+    // Desenhar arcos coloridos e linha branca (PRIMEIRO - por baixo)
     _drawColoredArcs(canvas, center, radius);
     _drawWhiteLine(canvas, center, radius);
 
-    // Desenhar elementos
+    // Desenhar linhas de marcação (POR CIMA das cores)
     _drawScaleMarks(canvas, center, radius);
+    
+    // Desenhar números
     _drawNumbers(canvas, center, radius);
+    
+    // Desenhar ponteiro
     _drawNeedle(canvas, center, radius);
 
     // Borda externa verde
@@ -131,6 +135,7 @@ class VelocimetroPainter extends CustomPainter {
 
   void _drawColoredArcs(Canvas canvas, Offset center, double radius) {
     // Arco VERDE: 60 → 150 nós
+    // MESMA posição das linhas (radius * 0.94)
     double greenStart = knotsToAngle(60);
     double greenEnd = knotsToAngle(150);
     double greenStartRad = angleToRadiansForPosition(greenStart);
@@ -139,11 +144,11 @@ class VelocimetroPainter extends CustomPainter {
     final greenPaint = Paint()
       ..color = Colors.green.withOpacity(0.6)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = radius * 0.10
+      ..strokeWidth = radius * 0.12  // Largura para cobrir área das linhas
       ..strokeCap = StrokeCap.butt;
 
     canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius * 0.82),
+      Rect.fromCircle(center: center, radius: radius * 0.94),
       greenStartRad,
       greenSweep,
       false,
@@ -159,11 +164,11 @@ class VelocimetroPainter extends CustomPainter {
     final yellowPaint = Paint()
       ..color = Colors.yellow.withOpacity(0.7)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = radius * 0.10
+      ..strokeWidth = radius * 0.12
       ..strokeCap = StrokeCap.butt;
 
     canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius * 0.82),
+      Rect.fromCircle(center: center, radius: radius * 0.94),
       yellowStartRad,
       yellowSweep,
       false,
@@ -179,11 +184,11 @@ class VelocimetroPainter extends CustomPainter {
     final redPaint = Paint()
       ..color = Colors.red.withOpacity(0.8)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = radius * 0.10
+      ..strokeWidth = radius * 0.12
       ..strokeCap = StrokeCap.butt;
 
     canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius * 0.82),
+      Rect.fromCircle(center: center, radius: radius * 0.94),
       redStartRad,
       redSweep,
       false,
@@ -193,6 +198,7 @@ class VelocimetroPainter extends CustomPainter {
 
   void _drawWhiteLine(Canvas canvas, Offset center, double radius) {
     // Linha branca interna grossa: 50 → 90 nós
+    // Toca borda interna das cores e linhas (88%)
     double lineStart = knotsToAngle(50);
     double lineEnd = knotsToAngle(90);
     double lineStartRad = angleToRadiansForPosition(lineStart);
@@ -205,7 +211,7 @@ class VelocimetroPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius * 0.75),
+      Rect.fromCircle(center: center, radius: radius * 0.88),
       lineStartRad,
       lineSweep,
       false,
