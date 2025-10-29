@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'telemetry_screen.dart';
+import 'selecao_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -13,9 +13,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _senhaController = TextEditingController();
 
   void _entrar() {
-    Navigator.pushReplacement(
+    Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const TelemetryScreen()),
+      MaterialPageRoute(builder: (context) => const SelecaoScreen()),
     );
   }
 
