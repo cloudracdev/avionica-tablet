@@ -14,8 +14,13 @@ import '../widgets/variometro_widget.dart';
 
 class SixPackScreen extends StatefulWidget {
   final WebSocketService wsService;
+  final CalibrationService? calibrationService;
 
-  const SixPackScreen({Key? key, required this.wsService}) : super(key: key);
+  const SixPackScreen({
+    Key? key,
+    required this.wsService,
+    this.calibrationService,
+  }) : super(key: key);
 
   @override
   State<SixPackScreen> createState() => _SixPackScreenState();
@@ -24,7 +29,7 @@ class SixPackScreen extends StatefulWidget {
 class _SixPackScreenState extends State<SixPackScreen> {
   StreamSubscription? _subscription;
   final PageController _pageController = PageController();
-  final CalibrationService _calib = CalibrationService();
+  late final CalibrationService _calib;
   final SmoothingService _smooth = SmoothingService();
   
   double _rawV = 0, _rawA = 0, _rawH = 0, _rawP = 0, _rawR = 0;
@@ -60,6 +65,9 @@ class _SixPackScreenState extends State<SixPackScreen> {
   @override
   void initState() {
     super.initState();
+
+    // Usar calibração recebida ou criar nova
+    _calib = widget.calibrationService ?? CalibrationService();
 
     // Forçar orientação horizontal
     SystemChrome.setPreferredOrientations([

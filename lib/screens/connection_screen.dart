@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 import 'dart:async';
-import 'telemetry_screen.dart';
+import '../utils/websocket_service.dart';
+import 'pre_flight_calibration_screen.dart';
 
 class ConnectionScreen extends StatefulWidget {
   const ConnectionScreen({Key? key}) : super(key: key);
@@ -11,33 +11,37 @@ class ConnectionScreen extends StatefulWidget {
 }
 
 class _ConnectionScreenState extends State<ConnectionScreen> {
+  final WebSocketService _wsService = WebSocketService();
   bool _conectando = false;
 
   void _conectar() async {
     setState(() => _conectando = true);
     
     try {
-      // Tentar conectar ao ESP32
-      final uri = Uri.parse('ws://192.168.4.1:81');
-      final channel = WebSocketChannel.connect(uri);
+      // Conectar ao ESP32
+      _wsService.connect('192.168.4.1');
       
-      // Aguardar primeiro dado com timeout de 5 segundos
-      await channel.stream.first.timeout(
-        const Duration(seconds: 5),
-        onTimeout: () {
-          throw TimeoutException('Tempo esgotado');
-        },
-      );
+      // Aguardar até estar conectado ou timeout de 5 segundos
+      int tentativas = 0;
+      while (!_wsService.isConnected && tentativas < 50) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        tentativas++;
+      }
       
-      // Fechar canal de teste
-      await channel.sink.close();
+      if (!_wsService.isConnected) {
+        throw TimeoutException('Tempo esgotado');
+      }
       
-      // Conexão OK! Navegar para instrumentos
+      // Conexão OK! Navegar para calibração
       if (!mounted) return;
       
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const TelemetryScreen()),
+        MaterialPageRoute(
+          builder: (context) => PreFlightCalibrationScreen(
+            wsService: _wsService,
+          ),
+        ),
       );
       
     } catch (e) {
