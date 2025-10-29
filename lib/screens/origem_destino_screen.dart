@@ -1,30 +1,30 @@
 import 'package:flutter/material.dart';
-import 'origem_destino_screen.dart';
+import 'connection_screen.dart';
 
-class SelecaoScreen extends StatefulWidget {
-  const SelecaoScreen({Key? key}) : super(key: key);
+class OrigemDestinoScreen extends StatefulWidget {
+  const OrigemDestinoScreen({Key? key}) : super(key: key);
 
   @override
-  State<SelecaoScreen> createState() => _SelecaoScreenState();
+  State<OrigemDestinoScreen> createState() => _OrigemDestinoScreenState();
 }
 
-class _SelecaoScreenState extends State<SelecaoScreen> {
-  final TextEditingController _aviaoController = TextEditingController();
-  final TextEditingController _alunoController = TextEditingController();
-  final TextEditingController _aulaController = TextEditingController();
+class _OrigemDestinoScreenState extends State<OrigemDestinoScreen> {
+  final TextEditingController _origemController = TextEditingController();
+  final TextEditingController _destinoController = TextEditingController();
+  final TextEditingController _waypointsController = TextEditingController();
 
   void _avancar() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const OrigemDestinoScreen()),
+      MaterialPageRoute(builder: (context) => const ConnectionScreen()),
     );
   }
 
   @override
   void dispose() {
-    _aviaoController.dispose();
-    _alunoController.dispose();
-    _aulaController.dispose();
+    _origemController.dispose();
+    _destinoController.dispose();
+    _waypointsController.dispose();
     super.dispose();
   }
 
@@ -40,16 +40,16 @@ class _SelecaoScreenState extends State<SelecaoScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.blue.shade800,
-              Colors.blue.shade600,
-              Colors.teal.shade500,
+              Colors.teal.shade700,
+              Colors.green.shade600,
+              Colors.lightGreen.shade500,
             ],
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              // Header com título e botão voltar
+              // Header
               Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: size.width * 0.03,
@@ -64,13 +64,13 @@ class _SelecaoScreenState extends State<SelecaoScreen> {
                     ),
                     SizedBox(width: size.width * 0.02),
                     Icon(
-                      Icons.checklist_rtl,
+                      Icons.map,
                       color: Colors.white,
                       size: isLandscape ? size.height * 0.08 : 32,
                     ),
                     SizedBox(width: size.width * 0.02),
                     Text(
-                      'Seleção de Voo',
+                      'Rota do Voo',
                       style: TextStyle(
                         fontSize: isLandscape ? size.height * 0.06 : 24,
                         fontWeight: FontWeight.bold,
@@ -82,7 +82,7 @@ class _SelecaoScreenState extends State<SelecaoScreen> {
                 ),
               ),
 
-              // Card central com campos
+              // Card central
               Expanded(
                 child: Center(
                   child: Padding(
@@ -91,7 +91,7 @@ class _SelecaoScreenState extends State<SelecaoScreen> {
                     ),
                     child: Container(
                       constraints: BoxConstraints(
-                        maxWidth: isLandscape ? size.width * 0.7 : size.width * 0.9,
+                        maxWidth: isLandscape ? size.width * 0.65 : size.width * 0.9,
                       ),
                       padding: EdgeInsets.all(size.height * 0.03),
                       decoration: BoxDecoration(
@@ -109,10 +109,10 @@ class _SelecaoScreenState extends State<SelecaoScreen> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Linha 1: Avião + Aluno
+                          // Origem e Destino lado a lado
                           Row(
                             children: [
-                              // Avião
+                              // Origem
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -121,13 +121,13 @@ class _SelecaoScreenState extends State<SelecaoScreen> {
                                     Row(
                                       children: [
                                         Icon(
-                                          Icons.flight,
-                                          color: Colors.orange.shade700,
+                                          Icons.flight_takeoff,
+                                          color: Colors.blue.shade700,
                                           size: 18,
                                         ),
                                         const SizedBox(width: 6),
                                         Text(
-                                          'Aeronave',
+                                          'Origem',
                                           style: TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.bold,
@@ -138,10 +138,10 @@ class _SelecaoScreenState extends State<SelecaoScreen> {
                                     ),
                                     const SizedBox(height: 8),
                                     TextField(
-                                      controller: _aviaoController,
+                                      controller: _origemController,
                                       style: const TextStyle(fontSize: 14),
                                       decoration: InputDecoration(
-                                        hintText: 'PT-XXX ou deixe vazio',
+                                        hintText: 'Ex: Curitiba',
                                         filled: true,
                                         fillColor: Colors.grey.shade100,
                                         border: OutlineInputBorder(
@@ -162,7 +162,7 @@ class _SelecaoScreenState extends State<SelecaoScreen> {
 
                               SizedBox(width: size.width * 0.03),
 
-                              // Aluno
+                              // Destino
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,13 +171,13 @@ class _SelecaoScreenState extends State<SelecaoScreen> {
                                     Row(
                                       children: [
                                         Icon(
-                                          Icons.school,
-                                          color: Colors.green.shade700,
+                                          Icons.flight_land,
+                                          color: Colors.orange.shade700,
                                           size: 18,
                                         ),
                                         const SizedBox(width: 6),
                                         Text(
-                                          'Aluno',
+                                          'Destino',
                                           style: TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.bold,
@@ -188,10 +188,10 @@ class _SelecaoScreenState extends State<SelecaoScreen> {
                                     ),
                                     const SizedBox(height: 8),
                                     TextField(
-                                      controller: _alunoController,
+                                      controller: _destinoController,
                                       style: const TextStyle(fontSize: 14),
                                       decoration: InputDecoration(
-                                        hintText: 'Nome ou deixe vazio',
+                                        hintText: 'Ex: Curitiba',
                                         filled: true,
                                         fillColor: Colors.grey.shade100,
                                         border: OutlineInputBorder(
@@ -212,9 +212,9 @@ class _SelecaoScreenState extends State<SelecaoScreen> {
                             ],
                           ),
 
-                          SizedBox(height: size.height * 0.025),
+                          SizedBox(height: size.height * 0.02),
 
-                          // Linha 2: Tipo de Aula (campo único centralizado)
+                          // Waypoints (campo opcional full width)
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
@@ -222,13 +222,13 @@ class _SelecaoScreenState extends State<SelecaoScreen> {
                               Row(
                                 children: [
                                   Icon(
-                                    Icons.menu_book,
+                                    Icons.location_on,
                                     color: Colors.purple.shade700,
                                     size: 18,
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    'Tipo de Aula',
+                                    'Passando por (opcional)',
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
@@ -239,10 +239,10 @@ class _SelecaoScreenState extends State<SelecaoScreen> {
                               ),
                               const SizedBox(height: 8),
                               TextField(
-                                controller: _aulaController,
+                                controller: _waypointsController,
                                 style: const TextStyle(fontSize: 14),
                                 decoration: InputDecoration(
-                                  hintText: 'Ex: Voo Local, Navegação, etc ou vazio',
+                                  hintText: 'Ex: São Paulo, Joinville (separar por vírgula)',
                                   filled: true,
                                   fillColor: Colors.grey.shade100,
                                   border: OutlineInputBorder(
@@ -261,7 +261,44 @@ class _SelecaoScreenState extends State<SelecaoScreen> {
                             ],
                           ),
 
-                          SizedBox(height: size.height * 0.025),
+                          SizedBox(height: size.height * 0.02),
+
+                          // Info adicional
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Colors.blue.shade200,
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  color: Colors.blue.shade700,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Voo circular: mesma origem/destino • Passando por: cidades intermediárias',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.blue.shade900,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          SizedBox(height: size.height * 0.02),
 
                           // Botão avançar
                           Center(
@@ -270,7 +307,7 @@ class _SelecaoScreenState extends State<SelecaoScreen> {
                               child: ElevatedButton(
                                 onPressed: _avancar,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green.shade600,
+                                  backgroundColor: Colors.green.shade700,
                                   foregroundColor: Colors.white,
                                   padding: EdgeInsets.symmetric(
                                     vertical: size.height * 0.018,
@@ -304,7 +341,7 @@ class _SelecaoScreenState extends State<SelecaoScreen> {
 
                           SizedBox(height: size.height * 0.015),
 
-                          // Info dev mode
+                          // Dev mode info
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
