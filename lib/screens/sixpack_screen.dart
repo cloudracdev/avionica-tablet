@@ -11,6 +11,8 @@ import '../widgets/altimetro_widget.dart';
 import '../widgets/bussola_widget.dart';
 import '../widgets/coordenador_widget.dart';
 import '../widgets/variometro_widget.dart';
+import 'connection_screen.dart';
+import 'resumo_screen.dart';
 
 class SixPackScreen extends StatefulWidget {
   final WebSocketService wsService;
@@ -62,12 +64,28 @@ class _SixPackScreenState extends State<SixPackScreen> {
   double _accelXOffset = 0;
   double _accelYOffset = 0;
 
+  // Estatísticas do voo
+  DateTime? _inicioVoo;
+  double _velocidadeMax = 0;
+  double _altitudeMax = 0;
+  double _pitchMax = 0;
+  double _pitchMin = 0;
+  double _rollMax = 0;
+  double _rollMin = 0;
+  double _varioMax = 0;
+  double _varioMin = 0;
+  double _temperaturaMax = -999;
+  double _temperaturaMin = 999;
+
   @override
   void initState() {
     super.initState();
 
     // Usar calibração recebida ou criar nova
     _calib = widget.calibrationService ?? CalibrationService();
+
+    // Iniciar cronômetro do voo
+    _inicioVoo = DateTime.now();
 
     // Forçar orientação horizontal
     SystemChrome.setPreferredOrientations([
@@ -183,6 +201,18 @@ class _SixPackScreenState extends State<SixPackScreen> {
           gyroZ = rawGyroZ - _gyroZOffset;
           accelX = rawAccelX - _accelXOffset;
           accelY = rawAccelY - _accelYOffset;
+
+          // 8. Atualizar estatísticas do voo
+          if (velocidade > _velocidadeMax) _velocidadeMax = velocidade;
+          if (altitude > _altitudeMax) _altitudeMax = altitude;
+          if (pitch > _pitchMax) _pitchMax = pitch;
+          if (pitch < _pitchMin) _pitchMin = pitch;
+          if (roll > _rollMax) _rollMax = roll;
+          if (roll < _rollMin) _rollMin = roll;
+          if (vario > _varioMax) _varioMax = vario;
+          if (vario < _varioMin) _varioMin = vario;
+          if (temperatura > _temperaturaMax) _temperaturaMax = temperatura;
+          if (temperatura < _temperaturaMin) _temperaturaMin = temperatura;
         });
       }
     });
@@ -224,16 +254,29 @@ class _SixPackScreenState extends State<SixPackScreen> {
     );
   }
 
-  void _calibrarCoordenador() {
-    setState(() {
-      _gyroZOffset = gyroZ + _gyroZOffset;
-      _accelXOffset = accelX + _accelXOffset;
-      _accelYOffset = accelY + _accelYOffset;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('✅ Coordenador calibrado! (Agulha e bolinha zerados)'),
-        duration: Duration(seconds: 2),
+  void _finalizarVoo() {
+    widget.wsService.disconnect();
+    
+    final duracao = _inicioVoo != null 
+        ? DateTime.now().difference(_inicioVoo!) 
+        : Duration.zero;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ResumoScreen(
+          duracao: duracao,
+          velocidadeMax: _velocidadeMax,
+          altitudeMax: _altitudeMax,
+          pitchMax: _pitchMax,
+          pitchMin: _pitchMin,
+          rollMax: _rollMax,
+          rollMin: _rollMin,
+          varioMax: _varioMax,
+          varioMin: _varioMin,
+          temperaturaMax: _temperaturaMax,
+          temperaturaMin: _temperaturaMin,
+        ),
       ),
     );
   }
@@ -271,11 +314,11 @@ class _SixPackScreenState extends State<SixPackScreen> {
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
-                  onPressed: _calibrarCoordenador,
-                  icon: const Icon(Icons.center_focus_strong, size: 16),
-                  label: const Text('Zerar Coord'),
+                  onPressed: _finalizarVoo,
+                  icon: const Icon(Icons.flag, size: 16),
+                  label: const Text('Finalizar'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal.shade700,
+                    backgroundColor: Colors.green.shade700,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
@@ -284,7 +327,12 @@ class _SixPackScreenState extends State<SixPackScreen> {
                 ElevatedButton.icon(
                   onPressed: () {
                     widget.wsService.disconnect();
-                    Navigator.pop(context);
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ConnectionScreen(),
+                      ),
+                    );
                   },
                   icon: const Icon(Icons.close, size: 16),
                   label: const Text('Desconectar'),
