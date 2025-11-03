@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../utils/websocket_service.dart';
+import '../services/websocket/websocket_service.dart';
 import 'sixpack_screen.dart';
 
 class TelemetryScreen extends StatefulWidget {

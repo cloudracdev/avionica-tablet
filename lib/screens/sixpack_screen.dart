@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
-import '../utils/websocket_service.dart';
-import '../utils/calibration_service.dart';
-import '../utils/smoothing_service.dart';
+import '../services/websocket/websocket_service.dart';
+import '../services/calibration/calibration_service.dart';
+import '../services/data_processing/smoothing_service.dart';
 import '../widgets/calibration_dialog.dart';
 import '../widgets/artificial_horizon.dart';
 import '../widgets/velocimetro_widget.dart';

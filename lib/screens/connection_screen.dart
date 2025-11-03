@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import '../utils/websocket_service.dart';
+import '../services/websocket/websocket_service.dart';
 import 'pre_flight_calibration_screen.dart';
 
 class ConnectionScreen extends StatefulWidget {

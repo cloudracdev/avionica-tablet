@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../utils/calibration_service.dart';
+import '../services/calibration/calibration_service.dart';
 
 class CalibrationDialog extends StatefulWidget {
   final CalibrationService calibrationService;

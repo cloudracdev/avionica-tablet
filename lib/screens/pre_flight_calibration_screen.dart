@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../utils/websocket_service.dart';
-import '../utils/calibration_service.dart';
+import '../services/websocket/websocket_service.dart';
+import '../services/calibration/calibration_service.dart';
 import 'sixpack_screen.dart';
 
 class PreFlightCalibrationScreen extends StatefulWidget {
