@@ -87,8 +87,10 @@ class _SixPackScreenState extends State<SixPackScreen> {
     // Iniciar cronômetro do voo
     _inicioVoo = DateTime.now();
 
-    // Forçar orientação horizontal
+    // Permitir todas as orientações
     SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
@@ -383,58 +385,129 @@ class _SixPackScreenState extends State<SixPackScreen> {
   // PÁGINA 1: SIX-PACK
   // ========================================
   Widget _buildSixPackPage() {
-    return Column(
-      children: [
-        // Linha superior
-        Expanded(
-          child: Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isLandscape = constraints.maxWidth > constraints.maxHeight;
+
+        if (isLandscape) {
+          // LANDSCAPE: 2 linhas x 3 colunas (layout original)
+          return Column(
             children: [
+              // Linha superior
               Expanded(
-                child: RepaintBoundary(
-                  child: VelocimetroWidget(velocidade: velocidade),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: VelocimetroWidget(velocidade: velocidade),
+                      ),
+                    ),
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: ArtificialHorizon(pitch: pitch, roll: roll),
+                      ),
+                    ),
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: AltimetroWidget(altitude: altitude),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              // Linha inferior
               Expanded(
-                child: RepaintBoundary(
-                  child: ArtificialHorizon(pitch: pitch, roll: roll),
-                ),
-              ),
-              Expanded(
-                child: RepaintBoundary(
-                  child: AltimetroWidget(altitude: altitude),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: BussolaWidget(heading: heading),
+                      ),
+                    ),
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: CoordenadorWidget(
+                          roll: roll,
+                          turnRate: gyroZ,
+                          accelX: accelX,
+                          accelY: accelY,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: VariometroWidget(vario: vario),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
-          ),
-        ),
-        // Linha inferior
-        Expanded(
-          child: Row(
+          );
+        } else {
+          // PORTRAIT: 3 linhas x 2 colunas
+          return Column(
             children: [
+              // Linha 1: Velocímetro | Horizonte
               Expanded(
-                child: RepaintBoundary(
-                  child: CoordenadorWidget(
-                    roll: roll,
-                    turnRate: gyroZ,
-                    accelX: accelX,
-                    accelY: accelY,
-                  ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: VelocimetroWidget(velocidade: velocidade),
+                      ),
+                    ),
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: ArtificialHorizon(pitch: pitch, roll: roll),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              // Linha 2: Altímetro | Bússola
               Expanded(
-                child: RepaintBoundary(
-                  child: BussolaWidget(heading: heading),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: AltimetroWidget(altitude: altitude),
+                      ),
+                    ),
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: BussolaWidget(heading: heading),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              // Linha 3: Coordenador | Variômetro
               Expanded(
-                child: RepaintBoundary(
-                  child: VariometroWidget(vario: vario),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: CoordenadorWidget(
+                          roll: roll,
+                          turnRate: gyroZ,
+                          accelX: accelX,
+                          accelY: accelY,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: VariometroWidget(vario: vario),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
-          ),
-        ),
-      ],
+          );
+        }
+      },
     );
   }
 
