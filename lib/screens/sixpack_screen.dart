@@ -409,7 +409,10 @@ class _SixPackScreenState extends State<SixPackScreen> {
                     ),
                     Expanded(
                       child: RepaintBoundary(
-                        child: AltimetroWidget(altitude: altitude),
+                        child: AltimetroWidget(
+                          altitude: altitude,
+                          pressao: pressao, // ✨ NOVO
+                        ),
                       ),
                     ),
                   ],
@@ -471,7 +474,10 @@ class _SixPackScreenState extends State<SixPackScreen> {
                   children: [
                     Expanded(
                       child: RepaintBoundary(
-                        child: AltimetroWidget(altitude: altitude),
+                        child: AltimetroWidget(
+                          altitude: altitude,
+                          pressao: pressao, // ✨ NOVO
+                        ),
                       ),
                     ),
                     Expanded(
