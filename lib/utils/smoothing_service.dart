@@ -88,8 +88,8 @@ class SmoothingService {
     _smoothAltitude = _smooth(
       rawData['altitude'] ?? _smoothAltitude,
       _smoothAltitude,
-      0.2,   // alpha: mais responsivo (importante para voo)
-      0.5    // deadZone: ignorar < 0.5m
+      0.5,   // alpha: mais responsivo (importante para voo)
+      0.1    // deadZone: ignorar < 0.5m
     );
 
     _smoothHeading = _smoothCircular(
@@ -116,22 +116,22 @@ class SmoothingService {
     _smoothVario = _smooth(
       rawData['vario'] ?? _smoothVario,
       _smoothVario,
-      0.2,   // alpha: mais responsivo
-      0.1    // deadZone: ignorar < 0.1 m/s
+      0.3,   // alpha: mais responsivo (era 0.2) ✅
+      0.02   // deadZone: aceita > 0.02 m/s = ~4 ft/min (era 0.1) ✅
     );
 
     _smoothTemperatura = _smooth(
       rawData['temperatura'] ?? _smoothTemperatura,
       _smoothTemperatura,
-      0.05,  // alpha: muito suave (temperatura muda devagar)
-      0.3    // deadZone: ignorar < 0.3°C
+      0.1,  // alpha: muito suave (temperatura muda devagar)
+      0.1    // deadZone: ignorar < 0.3°C
     );
 
     _smoothPressao = _smooth(
       rawData['pressao'] ?? _smoothPressao,
       _smoothPressao,
-      0.1,   // alpha: suave
-      50     // deadZone: ignorar < 50 Pa (~0.5 hPa)
+      0.3,   // alpha: suave
+      10     // deadZone: ignorar < 50 Pa (~0.5 hPa)
     );
 
     _smoothLat = _smooth(

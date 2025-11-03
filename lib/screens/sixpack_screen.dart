@@ -35,13 +35,13 @@ class _SixPackScreenState extends State<SixPackScreen> {
   final SmoothingService _smooth = SmoothingService();
   
   double _rawV = 0, _rawA = 0, _rawH = 0, _rawP = 0, _rawR = 0;
-  
-  // Para cálculo do variômetro (CALCULADO LOCALMENTE)
+  // Para cálculo do variômetro (CALCULADO LOCALMENTE com intervalo maior)
   double _altitudePrevious = 0;
   int _timePrevious = 0;
   bool _firstVarioCalc = true;
   double _varioSmooth = 0;
-  final double _varioAlpha = 0.2; // Filtro EMA
+  final double _varioAlpha = 0.15; // ✅ Filtro EMA mais suave (era 0.2)
+  final int _varioCalcInterval = 500; // ✅ Calcular apenas a cada 500ms (não a cada 50ms!)
   
   double velocidade = 0;
   double altitude = 0;
@@ -166,6 +166,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
           roll = _calib.applyCalibratedRoll(_rawR);
           
           // 5. CALCULAR VARIÔMETRO (m/s) baseado na altitude calibrada
+          // ✅ APENAS A CADA 500ms para reduzir amplificação de ruído
           int timeNow = DateTime.now().millisecondsSinceEpoch;
           
           if (_firstVarioCalc) {
@@ -175,10 +176,11 @@ class _SixPackScreenState extends State<SixPackScreen> {
             _firstVarioCalc = false;
             vario = 0;
           } else {
-            double deltaAltitude = altitude - _altitudePrevious;
+            // ✅ SÓ CALCULAR se passou intervalo mínimo
             int deltaTime = timeNow - _timePrevious;
             
-            if (deltaTime > 0) {
+            if (deltaTime >= _varioCalcInterval) {
+              double deltaAltitude = altitude - _altitudePrevious;
               double varioInstant = (deltaAltitude * 1000.0) / deltaTime; // m/s
               _varioSmooth = _varioAlpha * varioInstant + (1 - _varioAlpha) * _varioSmooth;
               vario = _varioSmooth;
@@ -186,6 +188,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
               _altitudePrevious = altitude;
               _timePrevious = timeNow;
             }
+            // Senão, mantém vario atual (não recalcula)
           }
           
           // 6. Dados extras (já suavizados)
