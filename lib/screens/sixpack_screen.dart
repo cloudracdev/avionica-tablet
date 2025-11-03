@@ -421,17 +421,17 @@ class _SixPackScreenState extends State<SixPackScreen> {
                   children: [
                     Expanded(
                       child: RepaintBoundary(
-                        child: BussolaWidget(heading: heading),
-                      ),
-                    ),
-                    Expanded(
-                      child: RepaintBoundary(
                         child: CoordenadorWidget(
                           roll: roll,
                           turnRate: gyroZ,
                           accelX: accelX,
                           accelY: accelY,
                         ),
+                      ),
+                    ),
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: BussolaWidget(heading: heading),
                       ),
                     ),
                     Expanded(
