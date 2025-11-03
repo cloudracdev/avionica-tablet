@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/telemetry_screen.dart';
+import 'screens/login_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -11,14 +11,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '✈️ Telemetria Avião',
+      title: '✈️ QFLY - Sistema de Instrução',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.orange,
+        primarySwatch: Colors.blue,
         brightness: Brightness.light,
         useMaterial3: true,
       ),
-      home: const TelemetryScreen(),
+      home: const LoginScreen(),
     );
   }
 }

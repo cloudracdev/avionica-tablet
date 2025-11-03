@@ -11,11 +11,18 @@ import '../widgets/altimetro_widget.dart';
 import '../widgets/bussola_widget.dart';
 import '../widgets/coordenador_widget.dart';
 import '../widgets/variometro_widget.dart';
+import 'connection_screen.dart';
+import 'resumo_screen.dart';
 
 class SixPackScreen extends StatefulWidget {
   final WebSocketService wsService;
+  final CalibrationService? calibrationService;
 
-  const SixPackScreen({Key? key, required this.wsService}) : super(key: key);
+  const SixPackScreen({
+    Key? key,
+    required this.wsService,
+    this.calibrationService,
+  }) : super(key: key);
 
   @override
   State<SixPackScreen> createState() => _SixPackScreenState();
@@ -24,7 +31,7 @@ class SixPackScreen extends StatefulWidget {
 class _SixPackScreenState extends State<SixPackScreen> {
   StreamSubscription? _subscription;
   final PageController _pageController = PageController();
-  final CalibrationService _calib = CalibrationService();
+  late final CalibrationService _calib;
   final SmoothingService _smooth = SmoothingService();
   
   double _rawV = 0, _rawA = 0, _rawH = 0, _rawP = 0, _rawR = 0;
@@ -57,12 +64,33 @@ class _SixPackScreenState extends State<SixPackScreen> {
   double _accelXOffset = 0;
   double _accelYOffset = 0;
 
+  // Estatísticas do voo
+  DateTime? _inicioVoo;
+  double _velocidadeMax = 0;
+  double _altitudeMax = 0;
+  double _pitchMax = 0;
+  double _pitchMin = 0;
+  double _rollMax = 0;
+  double _rollMin = 0;
+  double _varioMax = 0;
+  double _varioMin = 0;
+  double _temperaturaMax = -999;
+  double _temperaturaMin = 999;
+
   @override
   void initState() {
     super.initState();
 
-    // Forçar orientação horizontal
+    // Usar calibração recebida ou criar nova
+    _calib = widget.calibrationService ?? CalibrationService();
+
+    // Iniciar cronômetro do voo
+    _inicioVoo = DateTime.now();
+
+    // Permitir todas as orientações
     SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
@@ -175,6 +203,18 @@ class _SixPackScreenState extends State<SixPackScreen> {
           gyroZ = rawGyroZ - _gyroZOffset;
           accelX = rawAccelX - _accelXOffset;
           accelY = rawAccelY - _accelYOffset;
+
+          // 8. Atualizar estatísticas do voo
+          if (velocidade > _velocidadeMax) _velocidadeMax = velocidade;
+          if (altitude > _altitudeMax) _altitudeMax = altitude;
+          if (pitch > _pitchMax) _pitchMax = pitch;
+          if (pitch < _pitchMin) _pitchMin = pitch;
+          if (roll > _rollMax) _rollMax = roll;
+          if (roll < _rollMin) _rollMin = roll;
+          if (vario > _varioMax) _varioMax = vario;
+          if (vario < _varioMin) _varioMin = vario;
+          if (temperatura > _temperaturaMax) _temperaturaMax = temperatura;
+          if (temperatura < _temperaturaMin) _temperaturaMin = temperatura;
         });
       }
     });
@@ -216,16 +256,29 @@ class _SixPackScreenState extends State<SixPackScreen> {
     );
   }
 
-  void _calibrarCoordenador() {
-    setState(() {
-      _gyroZOffset = gyroZ + _gyroZOffset;
-      _accelXOffset = accelX + _accelXOffset;
-      _accelYOffset = accelY + _accelYOffset;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('✅ Coordenador calibrado! (Agulha e bolinha zerados)'),
-        duration: Duration(seconds: 2),
+  void _finalizarVoo() {
+    widget.wsService.disconnect();
+    
+    final duracao = _inicioVoo != null 
+        ? DateTime.now().difference(_inicioVoo!) 
+        : Duration.zero;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ResumoScreen(
+          duracao: duracao,
+          velocidadeMax: _velocidadeMax,
+          altitudeMax: _altitudeMax,
+          pitchMax: _pitchMax,
+          pitchMin: _pitchMin,
+          rollMax: _rollMax,
+          rollMin: _rollMin,
+          varioMax: _varioMax,
+          varioMin: _varioMin,
+          temperaturaMax: _temperaturaMax,
+          temperaturaMin: _temperaturaMin,
+        ),
       ),
     );
   }
@@ -263,11 +316,11 @@ class _SixPackScreenState extends State<SixPackScreen> {
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
-                  onPressed: _calibrarCoordenador,
-                  icon: const Icon(Icons.center_focus_strong, size: 16),
-                  label: const Text('Zerar Coord'),
+                  onPressed: _finalizarVoo,
+                  icon: const Icon(Icons.flag, size: 16),
+                  label: const Text('Finalizar'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal.shade700,
+                    backgroundColor: Colors.green.shade700,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
@@ -276,7 +329,12 @@ class _SixPackScreenState extends State<SixPackScreen> {
                 ElevatedButton.icon(
                   onPressed: () {
                     widget.wsService.disconnect();
-                    Navigator.pop(context);
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ConnectionScreen(),
+                      ),
+                    );
                   },
                   icon: const Icon(Icons.close, size: 16),
                   label: const Text('Desconectar'),
@@ -327,58 +385,129 @@ class _SixPackScreenState extends State<SixPackScreen> {
   // PÁGINA 1: SIX-PACK
   // ========================================
   Widget _buildSixPackPage() {
-    return Column(
-      children: [
-        // Linha superior
-        Expanded(
-          child: Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isLandscape = constraints.maxWidth > constraints.maxHeight;
+
+        if (isLandscape) {
+          // LANDSCAPE: 2 linhas x 3 colunas (layout original)
+          return Column(
             children: [
+              // Linha superior
               Expanded(
-                child: RepaintBoundary(
-                  child: VelocimetroWidget(velocidade: velocidade),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: VelocimetroWidget(velocidade: velocidade),
+                      ),
+                    ),
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: ArtificialHorizon(pitch: pitch, roll: roll),
+                      ),
+                    ),
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: AltimetroWidget(altitude: altitude),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              // Linha inferior
               Expanded(
-                child: RepaintBoundary(
-                  child: ArtificialHorizon(pitch: pitch, roll: roll),
-                ),
-              ),
-              Expanded(
-                child: RepaintBoundary(
-                  child: AltimetroWidget(altitude: altitude),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: BussolaWidget(heading: heading),
+                      ),
+                    ),
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: CoordenadorWidget(
+                          roll: roll,
+                          turnRate: gyroZ,
+                          accelX: accelX,
+                          accelY: accelY,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: VariometroWidget(vario: vario),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
-          ),
-        ),
-        // Linha inferior
-        Expanded(
-          child: Row(
+          );
+        } else {
+          // PORTRAIT: 3 linhas x 2 colunas
+          return Column(
             children: [
+              // Linha 1: Velocímetro | Horizonte
               Expanded(
-                child: RepaintBoundary(
-                  child: CoordenadorWidget(
-                    roll: roll,
-                    turnRate: gyroZ,
-                    accelX: accelX,
-                    accelY: accelY,
-                  ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: VelocimetroWidget(velocidade: velocidade),
+                      ),
+                    ),
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: ArtificialHorizon(pitch: pitch, roll: roll),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              // Linha 2: Altímetro | Bússola
               Expanded(
-                child: RepaintBoundary(
-                  child: BussolaWidget(heading: heading),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: AltimetroWidget(altitude: altitude),
+                      ),
+                    ),
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: BussolaWidget(heading: heading),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              // Linha 3: Coordenador | Variômetro
               Expanded(
-                child: RepaintBoundary(
-                  child: VariometroWidget(vario: vario),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: CoordenadorWidget(
+                          roll: roll,
+                          turnRate: gyroZ,
+                          accelX: accelX,
+                          accelY: accelY,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: RepaintBoundary(
+                        child: VariometroWidget(vario: vario),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
-          ),
-        ),
-      ],
+          );
+        }
+      },
     );
   }
 
