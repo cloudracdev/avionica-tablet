@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'connection_screen.dart';
+import 'avaliacao_screen.dart';
 
 class ResumoScreen extends StatelessWidget {
+  final String nomeInstrutor;
+  final String nomeAluno;
   final Duration duracao;
   final double velocidadeMax;
   final double altitudeMax;
@@ -16,6 +19,8 @@ class ResumoScreen extends StatelessWidget {
 
   const ResumoScreen({
     Key? key,
+    this.nomeInstrutor = 'Instrutor',
+    this.nomeAluno = 'Aluno',
     required this.duracao,
     required this.velocidadeMax,
     required this.altitudeMax,
@@ -201,6 +206,47 @@ class ResumoScreen extends StatelessWidget {
                     ),
 
                     SizedBox(height: isLandscape ? 20 : 16),
+
+                    // Botão Avaliar Aula
+                    SizedBox(
+                      width: double.infinity,
+                      height: isLandscape ? 56 : 48,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AvaliacaoScreen(
+                                nomeInstrutor: nomeInstrutor,
+                                nomeAluno: nomeAluno,
+                                duracao: duracao,
+                                velocidadeMax: velocidadeMax,
+                                altitudeMax: altitudeMax,
+                              ),
+                            ),
+                          );
+                        },
+                        icon: Icon(Icons.rate_review, size: isLandscape ? 24 : 20),
+                        label: Text(
+                          'AVALIAR AULA',
+                          style: TextStyle(
+                            fontSize: isLandscape ? 18 : 16,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.purple.shade600,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 4,
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: isLandscape ? 16 : 12),
 
                     // Botão Nova Conexão
                     SizedBox(
