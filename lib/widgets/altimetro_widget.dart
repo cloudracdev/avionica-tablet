@@ -92,6 +92,9 @@ class AltimetroPainter extends CustomPainter {
     // Desenhar escala (números e marcações)
     _drawScale(canvas, center, radius);
     
+    // Desenhar janela 10.000 pés (crosshatch/barber pole)
+    _draw10kWindow(canvas, center, radius);
+    
     // Desenhar os 3 ponteiros (ordem: 10k, 1k, 100 - do menor para o maior)
     _drawPointer10000(canvas, center, radius);
     _drawPointer1000(canvas, center, radius);
@@ -182,12 +185,115 @@ class AltimetroPainter extends CustomPainter {
     }
   }
 
+  void _draw10kWindow(Canvas canvas, Offset center, double radius) {
+    // Posição: 90° no dial (entre 2 e 3) = 0° cartesiano (DIREITA)
+    double angleRadians = 0;
+    double distance = radius * 0.50;
+    
+    double x = center.dx + distance * cos(angleRadians);
+    double y = center.dy + distance * sin(angleRadians);
+    
+    // Dimensões da janela
+    double windowWidth = radius * 0.20;
+    double windowHeight = radius * 0.24;
+    
+    final windowRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(x, y),
+        width: windowWidth,
+        height: windowHeight,
+      ),
+      const Radius.circular(3),
+    );
+    
+    // Fundo branco da janela
+    canvas.drawRRect(windowRect, Paint()..color = Colors.white);
+    
+    // Determinar conteúdo: crosshatch se < 10k, número se >= 10k
+    if (altitudeFeet < 10000) {
+      // Desenhar listras diagonais (crosshatch/barber pole)
+      _drawCrosshatch(canvas, windowRect, radius);
+    } else {
+      // Desenhar dígito das dezenas de milhar
+      int tenThousands = (altitudeFeet ~/ 10000).toInt();
+      
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: tenThousands.toString(),
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: radius * 0.15,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'monospace',
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout();
+      
+      textPainter.paint(
+        canvas,
+        Offset(x - textPainter.width / 2, y - textPainter.height / 2),
+      );
+    }
+    
+    // Borda preta da janela
+    canvas.drawRRect(
+      windowRect,
+      Paint()
+        ..color = Colors.black
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0,
+    );
+  }
+
+  void _drawCrosshatch(Canvas canvas, RRect windowRect, double radius) {
+    final rect = windowRect.outerRect;
+    
+    canvas.save();
+    canvas.clipRRect(windowRect);
+    
+    final stripePaint = Paint()
+      ..color = Colors.black
+      ..strokeWidth = radius * 0.018
+      ..strokeCap = StrokeCap.butt;
+    
+    // Listras diagonais a 45° (de noroeste para sudeste)
+    double spacing = radius * 0.025;
+    
+    // Calcular quantas linhas precisamos para cobrir toda a diagonal
+    double diagonal = sqrt(rect.width * rect.width + rect.height * rect.height);
+    int numLines = ((diagonal * 1.5) / spacing).ceil();
+    
+    // Desenhar linhas diagonais paralelas
+    for (int i = -numLines ~/ 2; i <= numLines ~/ 2; i++) {
+      double offset = i * spacing;
+      
+      // Ponto inicial: canto superior esquerdo + offset
+      double x1 = rect.left + offset;
+      double y1 = rect.top;
+      
+      // Ponto final: canto inferior direito + offset (mantendo 45°)
+      double x2 = rect.left + offset + rect.height;
+      double y2 = rect.bottom;
+      
+      canvas.drawLine(
+        Offset(x1, y1),
+        Offset(x2, y2),
+        stripePaint,
+      );
+    }
+    
+    canvas.restore();
+  }
+
   void _drawPointer100(Canvas canvas, Offset center, double radius) {
     // Ponteiro de 100 pés (médio/fino)
     // 1 volta completa = 1000 pés
+    // 0 pés = aponta para 12h (topo)
     double feet100 = altitudeFeet % 1000;
-    double angle = (feet100 / 1000) * 360;
-    double radian = (angle - 90) * pi / 180;
+    double angle = (feet100 / 1000) * 360; // 0° = 12h, 90° = 3h, etc
+    double radian = angle * pi / 180;
     
     canvas.save();
     canvas.translate(center.dx, center.dy);
@@ -199,10 +305,10 @@ class AltimetroPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    // Ponteiro médio: 5% até 65%
+    // Ponteiro médio: pequena cauda até ponta
     canvas.drawLine(
-      Offset(0, radius * 0.05),
-      Offset(0, -radius * 0.65),
+      Offset(0, radius * 0.08),  // pequena cauda
+      Offset(0, -radius * 0.65), // ponta longa
       needlePaint,
     );
 
@@ -212,9 +318,10 @@ class AltimetroPainter extends CustomPainter {
   void _drawPointer1000(Canvas canvas, Offset center, double radius) {
     // Ponteiro de 1000 pés (curto/grosso)
     // 1 volta completa = 10.000 pés
+    // 0 pés = aponta para 12h (topo)
     double feet1000 = (altitudeFeet % 10000) / 1000;
-    double angle = (feet1000 / 10) * 360;
-    double radian = (angle - 90) * pi / 180;
+    double angle = (feet1000 / 10) * 360; // 0° = 12h
+    double radian = angle * pi / 180;
     
     canvas.save();
     canvas.translate(center.dx, center.dy);
@@ -226,9 +333,9 @@ class AltimetroPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    // Ponteiro curto e grosso: 5% até 55%
+    // Ponteiro curto e grosso
     canvas.drawLine(
-      Offset(0, radius * 0.05),
+      Offset(0, radius * 0.08),
       Offset(0, -radius * 0.55),
       needlePaint,
     );
@@ -239,9 +346,10 @@ class AltimetroPainter extends CustomPainter {
   void _drawPointer10000(Canvas canvas, Offset center, double radius) {
     // Ponteiro de 10.000 pés (longo/fino)
     // 1 volta completa = 100.000 pés
+    // 0 pés = aponta para 12h (topo)
     double feet10000 = altitudeFeet / 10000;
-    double angle = (feet10000 / 10) * 360;
-    double radian = (angle - 90) * pi / 180;
+    double angle = (feet10000 / 10) * 360; // 0° = 12h
+    double radian = angle * pi / 180;
     
     canvas.save();
     canvas.translate(center.dx, center.dy);
@@ -253,11 +361,25 @@ class AltimetroPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    // Ponteiro longo e fino: 5% até 75%
+    // Ponteiro longo e fino com ponta triangular
     canvas.drawLine(
-      Offset(0, radius * 0.05),
+      Offset(0, radius * 0.08),
       Offset(0, -radius * 0.75),
       needlePaint,
+    );
+    
+    // Ponta triangular (opcional, mais realista)
+    final trianglePath = Path()
+      ..moveTo(0, -radius * 0.75)
+      ..lineTo(-radius * 0.02, -radius * 0.70)
+      ..lineTo(radius * 0.02, -radius * 0.70)
+      ..close();
+    
+    canvas.drawPath(
+      trianglePath,
+      Paint()
+        ..color = Colors.white.withOpacity(0.9)
+        ..style = PaintingStyle.fill,
     );
 
     canvas.restore();
