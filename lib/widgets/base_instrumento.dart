@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+/// Base instrument widget for simple numeric displays.
+///
+/// Generic widget for displaying instrument values with title, value, and unit.
+/// Used for simple instruments that don't require custom painters.
 class BaseInstrumento extends StatelessWidget {
   final String titulo;
   final String valor;
@@ -9,14 +13,14 @@ class BaseInstrumento extends StatelessWidget {
   final double fontSize;
 
   const BaseInstrumento({
-    Key? key,
+    super.key,
     required this.titulo,
     required this.valor,
     required this.unidade,
     required this.cor,
     required this.icone,
     this.fontSize = 16,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +34,7 @@ class BaseInstrumento extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Título
+          // Title
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
@@ -44,10 +48,10 @@ class BaseInstrumento extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ),
-          
+
           const SizedBox(height: 16),
 
-          // Valor principal (maior)
+          // Main value (large)
           Text(
             valor,
             style: const TextStyle(
@@ -60,7 +64,7 @@ class BaseInstrumento extends StatelessWidget {
 
           const SizedBox(height: 8),
 
-          // Unidade
+          // Unit
           if (unidade.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),

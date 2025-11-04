@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/calibration/calibration_service.dart';
 
+/// Calibration dialog for instrument offsets.
+///
+/// Allows calibrating compass heading and zeroing pitch, roll, and altitude readings.
 class CalibrationDialog extends StatefulWidget {
   final CalibrationService calibrationService;
   final double currentHeading;
@@ -9,13 +12,13 @@ class CalibrationDialog extends StatefulWidget {
   final double currentAltitude;
 
   const CalibrationDialog({
-    Key? key,
+    super.key,
     required this.calibrationService,
     required this.currentHeading,
     required this.currentPitch,
     required this.currentRoll,
     required this.currentAltitude,
-  }) : super(key: key);
+  });
 
   @override
   State<CalibrationDialog> createState() => _CalibrationDialogState();
@@ -34,23 +37,26 @@ class _CalibrationDialogState extends State<CalibrationDialog> {
   }
 
   void _applyCalibration() {
-    // Calibrar bússola se valor foi digitado
+    // Calibrate compass if value entered
     if (_headingController.text.isNotEmpty) {
       double realHeading = double.tryParse(_headingController.text) ?? 0.0;
-      widget.calibrationService.calibrateHeading(realHeading, widget.currentHeading);
+      widget.calibrationService.calibrateHeading(
+        realHeading,
+        widget.currentHeading,
+      );
     }
 
-    // Zerar pitch se marcado
+    // Zero pitch if checked
     if (_zeroPitch) {
       widget.calibrationService.zeroPitch(widget.currentPitch);
     }
 
-    // Zerar roll se marcado
+    // Zero roll if checked
     if (_zeroRoll) {
       widget.calibrationService.zeroRoll(widget.currentRoll);
     }
 
-    // Zerar altitude se marcado
+    // Zero altitude if checked
     if (_zeroAltitude) {
       widget.calibrationService.zeroAltitude(widget.currentAltitude);
     }
@@ -71,7 +77,7 @@ class _CalibrationDialogState extends State<CalibrationDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Título
+              // Title
               const Text(
                 '⚙️ CALIBRAÇÃO',
                 style: TextStyle(
@@ -83,13 +89,17 @@ class _CalibrationDialogState extends State<CalibrationDialog> {
               ),
               const SizedBox(height: 16),
 
-              // Input Bússola
+              // Compass input
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     '🧭 Bússola Real:',
-                    style: TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.blue,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   TextField(
@@ -103,7 +113,10 @@ class _CalibrationDialogState extends State<CalibrationDialog> {
                       suffixStyle: const TextStyle(color: Colors.white),
                       filled: true,
                       fillColor: Colors.grey.shade800,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide.none,
@@ -122,10 +135,14 @@ class _CalibrationDialogState extends State<CalibrationDialog> {
               const Divider(color: Colors.grey, height: 1),
               const SizedBox(height: 12),
 
-              // Checkboxes para zerar valores
+              // Zero checkboxes
               const Text(
                 '🔄 Zerar:',
-                style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.orange,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
 
@@ -141,7 +158,9 @@ class _CalibrationDialogState extends State<CalibrationDialog> {
                 tileColor: Colors.grey.shade800,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                 dense: true,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
               ),
 
               const SizedBox(height: 6),
@@ -158,7 +177,9 @@ class _CalibrationDialogState extends State<CalibrationDialog> {
                 tileColor: Colors.grey.shade800,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                 dense: true,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
               ),
 
               const SizedBox(height: 6),
@@ -175,12 +196,14 @@ class _CalibrationDialogState extends State<CalibrationDialog> {
                 tileColor: Colors.grey.shade800,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                 dense: true,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
               ),
 
               const SizedBox(height: 16),
 
-              // Botões
+              // Action buttons
               Row(
                 children: [
                   Expanded(
@@ -190,7 +213,10 @@ class _CalibrationDialogState extends State<CalibrationDialog> {
                         backgroundColor: Colors.grey.shade700,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      child: const Text('Cancelar', style: TextStyle(fontSize: 14)),
+                      child: const Text(
+                        'Cancelar',
+                        style: TextStyle(fontSize: 14),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -201,7 +227,13 @@ class _CalibrationDialogState extends State<CalibrationDialog> {
                         backgroundColor: Colors.green,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      child: const Text('Aplicar', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        'Aplicar',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ],
