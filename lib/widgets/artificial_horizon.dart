@@ -1,50 +1,64 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../core/constants/instrument_constants.dart';
+import '../core/constants/app_constants.dart';
 
+/// Artificial Horizon instrument widget.
+///
+/// Displays aircraft pitch and roll attitude relative to the horizon.
+/// The horizon line tilts with roll, and moves vertically with pitch.
 class ArtificialHorizon extends StatelessWidget {
-  final double pitch;  // -90 a +90 graus
-  final double roll;   // 0 a 360 graus
+  /// Pitch angle in degrees (-90 to +90)
+  final double pitch;
+  
+  /// Roll angle in degrees (0 to 360)
+  final double roll;
 
   const ArtificialHorizon({
-    Key? key,
+    super.key,
     required this.pitch,
     required this.roll,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(4),
+      margin: EdgeInsets.all(InstrumentConstants.instrumentMargin),
       decoration: BoxDecoration(
         color: Colors.grey.shade900,
-        border: Border.all(color: Colors.blue, width: 2),
-        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.blue,
+          width: InstrumentConstants.instrumentBorderWidth,
+        ),
+        borderRadius: BorderRadius.circular(
+          InstrumentConstants.instrumentBorderRadius,
+        ),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Título
-          const Padding(
-            padding: EdgeInsets.only(top: 4),
+          // Title
+          Padding(
+            padding: EdgeInsets.only(top: InstrumentConstants.instrumentPadding),
             child: Text(
-              'HORIZONTE ARTIFICIAL',
+              AppConstants.titleHorizonArtificial,
               style: TextStyle(
                 color: Colors.blue,
-                fontSize: 12,
+                fontSize: InstrumentConstants.instrumentTitleFontSize,
                 fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
+                letterSpacing: InstrumentConstants.instrumentTitleLetterSpacing,
               ),
               textAlign: TextAlign.center,
             ),
           ),
 
-          // Instrumento (CustomPaint)
+          // Instrument (CustomPaint)
           Expanded(
             child: Center(
               child: AspectRatio(
                 aspectRatio: 1,
                 child: Padding(
-                  padding: const EdgeInsets.all(4),
+                  padding: EdgeInsets.all(InstrumentConstants.instrumentPadding),
                   child: CustomPaint(
                     painter: HorizonPainter(pitch: pitch, roll: roll),
                     child: Container(),
@@ -54,14 +68,14 @@ class ArtificialHorizon extends StatelessWidget {
             ),
           ),
 
-          // Valores numéricos
+          // Numeric values
           Padding(
-            padding: const EdgeInsets.only(bottom: 4),
+            padding: EdgeInsets.only(bottom: InstrumentConstants.instrumentPadding),
             child: Text(
               'P:${pitch.toInt()}° R:${roll.toInt()}°',
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
-                fontSize: 10,
+                fontSize: InstrumentConstants.instrumentValueFontSize,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -72,6 +86,7 @@ class ArtificialHorizon extends StatelessWidget {
   }
 }
 
+/// Custom painter for the artificial horizon.
 class HorizonPainter extends CustomPainter {
   final double pitch;
   final double roll;
@@ -83,40 +98,40 @@ class HorizonPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
 
-    // Clip circular (borda redonda do instrumento)
+    // Clip circular (round instrument border)
     canvas.clipPath(Path()..addOval(Rect.fromCircle(center: center, radius: radius)));
 
-    // Salvar estado do canvas
+    // Save canvas state
     canvas.save();
 
-    // Mover origem para o centro
+    // Move origin to center
     canvas.translate(center.dx, center.dy);
 
-    // Rotacionar com roll (converter para radianos)
+    // Rotate with roll (convert to radians)
     canvas.rotate(-roll * pi / 180);
 
-    // Deslocar verticalmente com pitch (1 grau = 3 pixels)
-    double pitchOffset = pitch * 3;
+    // Translate vertically with pitch
+    double pitchOffset = pitch * InstrumentConstants.horizonPitchScale;
     canvas.translate(0, pitchOffset);
 
-    // Desenhar CÉU (azul)
+    // Draw SKY (blue)
     final skyPaint = Paint()..color = const Color(0xFF0077BE);
     canvas.drawRect(
       Rect.fromLTWH(-radius * 2, -radius * 2, radius * 4, radius * 2),
       skyPaint,
     );
 
-    // Desenhar TERRA (marrom)
+    // Draw GROUND (brown)
     final groundPaint = Paint()..color = const Color(0xFF8B4513);
     canvas.drawRect(
       Rect.fromLTWH(-radius * 2, 0, radius * 4, radius * 2),
       groundPaint,
     );
 
-    // Desenhar LINHA DO HORIZONTE (branca grossa)
+    // Draw HORIZON LINE (thick white)
     final horizonPaint = Paint()
       ..color = Colors.white
-      ..strokeWidth = 3
+      ..strokeWidth = InstrumentConstants.horizonLineWidth
       ..style = PaintingStyle.stroke;
 
     canvas.drawLine(
@@ -125,34 +140,34 @@ class HorizonPainter extends CustomPainter {
       horizonPaint,
     );
 
-    // Desenhar ESCALAS DE PITCH
+    // Draw PITCH SCALES
     final scalePaint = Paint()
       ..color = Colors.white
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
-    // Linhas de pitch a cada 10 graus
-    for (int angle = -90; angle <= 90; angle += 10) {
-      if (angle == 0) continue; // Pular linha do horizonte
+    // Pitch lines every 10 degrees
+    for (int angle = -90; angle <= 90; angle += InstrumentConstants.horizonPitchInterval) {
+      if (angle == 0) continue; // Skip horizon line
 
-      double y = -angle * 3.0; // Negativo porque Y cresce para baixo
-      double lineWidth = (angle % 20 == 0) ? 40.0 : 25.0; // Linhas maiores a cada 20°
+      double y = -angle * InstrumentConstants.horizonPitchScale;
+      double lineWidth = (angle % 20 == 0) ? 40.0 : 25.0;
 
-      // Desenhar linha
+      // Draw line
       canvas.drawLine(
         Offset(-lineWidth, y),
         Offset(lineWidth, y),
         scalePaint,
       );
 
-      // Desenhar número (apenas múltiplos de 10)
+      // Draw numbers (multiples of 10 only)
       if (angle.abs() >= 10) {
         final textPainter = TextPainter(
           text: TextSpan(
             text: angle.abs().toString(),
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
-              fontSize: 12,
+              fontSize: InstrumentConstants.horizonPitchFontSize,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -160,38 +175,44 @@ class HorizonPainter extends CustomPainter {
         );
         textPainter.layout();
 
-        // Números dos dois lados
+        // Numbers on both sides
         textPainter.paint(canvas, Offset(-lineWidth - 20, y - 6));
         textPainter.paint(canvas, Offset(lineWidth + 8, y - 6));
       }
     }
 
-    // Restaurar canvas
+    // Restore canvas
     canvas.restore();
 
-    // Desenhar AVIÃOZINHO FIXO no centro (não rotaciona)
+    // Draw FIXED AIRPLANE symbol in center (doesn't rotate)
     final planePaint = Paint()
       ..color = Colors.yellow
-      ..strokeWidth = 4
+      ..strokeWidth = InstrumentConstants.horizonAirplaneStrokeWidth
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    // Asas do avião (horizontal)
+    final wingspan = radius * InstrumentConstants.horizonAirplaneWingspan;
+
+    // Airplane wings (horizontal)
     canvas.drawLine(
-      Offset(center.dx - 50, center.dy),
+      Offset(center.dx - wingspan, center.dy),
       Offset(center.dx - 15, center.dy),
       planePaint,
     );
     canvas.drawLine(
       Offset(center.dx + 15, center.dy),
-      Offset(center.dx + 50, center.dy),
+      Offset(center.dx + wingspan, center.dy),
       planePaint,
     );
 
-    // Centro do avião (círculo)
-    canvas.drawCircle(center, 5, Paint()..color = Colors.yellow);
+    // Airplane center (circle)
+    canvas.drawCircle(
+      center,
+      radius * InstrumentConstants.horizonAirplaneCenterRadius,
+      Paint()..color = Colors.yellow,
+    );
 
-    // Nariz do avião (triângulo pequeno)
+    // Airplane nose (small triangle)
     final nosePath = Path()
       ..moveTo(center.dx, center.dy - 10)
       ..lineTo(center.dx - 4, center.dy - 2)
@@ -199,7 +220,7 @@ class HorizonPainter extends CustomPainter {
       ..close();
     canvas.drawPath(nosePath, Paint()..color = Colors.yellow);
 
-    // Desenhar BORDA CIRCULAR externa
+    // Draw CIRCULAR BORDER
     final borderPaint = Paint()
       ..color = Colors.grey.shade800
       ..style = PaintingStyle.stroke
@@ -207,47 +228,54 @@ class HorizonPainter extends CustomPainter {
 
     canvas.drawCircle(center, radius, borderPaint);
 
-    // Desenhar MARCAS DE ROLL no topo
+    // Draw ROLL MARKS at top
     _drawRollMarks(canvas, center, radius);
   }
 
+  /// Draws roll angle marks around the top of the instrument.
   void _drawRollMarks(Canvas canvas, Offset center, double radius) {
     final markPaint = Paint()
       ..color = Colors.white
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
-    // Marcas de roll: 0°, 10°, 20°, 30°, 45°, 60°
+    // Roll marks: 0°, 10°, 20°, 30°, 45°, 60°
     final angles = [0, 10, 20, 30, 45, 60];
 
     for (final angle in angles) {
       for (final side in [-1, 1]) {
         final actualAngle = angle * side;
-        final radian = (actualAngle - 90) * pi / 180; // -90 para começar no topo
+        final radian = (actualAngle - 90) * pi / 180; // -90 to start at top
 
-        final outerX = center.dx + radius * 0.95 * cos(radian);
-        final outerY = center.dy + radius * 0.95 * sin(radian);
-        final innerX = center.dx + radius * 0.85 * cos(radian);
-        final innerY = center.dy + radius * 0.85 * sin(radian);
+        final outerX = center.dx + 
+            radius * InstrumentConstants.horizonRollMarkOuterPosition * cos(radian);
+        final outerY = center.dy + 
+            radius * InstrumentConstants.horizonRollMarkOuterPosition * sin(radian);
 
-        // Marca maior para 0°, 30°, 60°
-        final length = (angle == 0 || angle == 30 || angle == 60) ? 0.85 : 0.90;
-        final finalInnerX = center.dx + radius * length * cos(radian);
-        final finalInnerY = center.dy + radius * length * sin(radian);
+        // Longer marks for 0°, 30°, 60°
+        final length = (angle == 0 || angle == 30 || angle == 60)
+            ? InstrumentConstants.horizonRollMarkMajorLength
+            : InstrumentConstants.horizonRollMarkMinorLength;
+
+        final innerX = center.dx + radius * length * cos(radian);
+        final innerY = center.dy + radius * length * sin(radian);
 
         canvas.drawLine(
           Offset(outerX, outerY),
-          Offset(finalInnerX, finalInnerY),
+          Offset(innerX, innerY),
           markPaint,
         );
       }
     }
 
-    // Triângulo indicador no topo (marca atual de roll)
+    // Triangle indicator at top (current roll mark)
+    final triangleSize = InstrumentConstants.horizonRollTriangleSize;
+    final trianglePos = radius * InstrumentConstants.horizonRollTrianglePosition;
+    
     final trianglePath = Path()
-      ..moveTo(center.dx, center.dy - radius * 0.80)
-      ..lineTo(center.dx - 6, center.dy - radius * 0.92)
-      ..lineTo(center.dx + 6, center.dy - radius * 0.92)
+      ..moveTo(center.dx, center.dy - trianglePos)
+      ..lineTo(center.dx - triangleSize, center.dy - radius * 0.92)
+      ..lineTo(center.dx + triangleSize, center.dy - radius * 0.92)
       ..close();
 
     canvas.drawPath(trianglePath, Paint()..color = Colors.yellow);

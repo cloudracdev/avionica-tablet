@@ -1,41 +1,59 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../core/constants/instrument_constants.dart';
+import '../core/constants/app_constants.dart';
 
+/// Turn Coordinator instrument widget.
+///
+/// Displays rate of turn (airplane symbol) and slip/skid (inclinometer ball).
+/// The airplane symbol tilts with roll, and the ball moves with lateral acceleration.
 class CoordenadorWidget extends StatelessWidget {
+  /// Roll angle in degrees
   final double roll;
+  
+  /// Rate of turn in degrees/second
   final double turnRate;
+  
+  /// X-axis acceleration in g-force
   final double accelX;
+  
+  /// Y-axis acceleration in g-force
   final double accelY;
 
   const CoordenadorWidget({
-    Key? key,
+    super.key,
     required this.roll,
     this.turnRate = 0,
     this.accelX = 0,
     this.accelY = 0,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(4),
+      margin: EdgeInsets.all(InstrumentConstants.instrumentMargin),
       decoration: BoxDecoration(
         color: Colors.grey.shade900,
-        border: Border.all(color: Colors.teal, width: 2),
-        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.teal,
+          width: InstrumentConstants.instrumentBorderWidth,
+        ),
+        borderRadius: BorderRadius.circular(
+          InstrumentConstants.instrumentBorderRadius,
+        ),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 4),
+          Padding(
+            padding: EdgeInsets.only(top: InstrumentConstants.instrumentPadding),
             child: Text(
-              'COORDENADOR',
+              AppConstants.titleCoordenador,
               style: TextStyle(
                 color: Colors.teal,
-                fontSize: 12,
+                fontSize: InstrumentConstants.instrumentTitleFontSize,
                 fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
+                letterSpacing: InstrumentConstants.instrumentTitleLetterSpacing,
               ),
               textAlign: TextAlign.center,
             ),
@@ -45,7 +63,7 @@ class CoordenadorWidget extends StatelessWidget {
               child: AspectRatio(
                 aspectRatio: 1,
                 child: Padding(
-                  padding: const EdgeInsets.all(4),
+                  padding: EdgeInsets.all(InstrumentConstants.instrumentPadding),
                   child: CustomPaint(
                     painter: CoordenadorPainter(
                       roll: roll,
@@ -60,12 +78,12 @@ class CoordenadorWidget extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.only(bottom: 4),
+            padding: EdgeInsets.only(bottom: InstrumentConstants.instrumentPadding),
             child: Text(
               'Roll: ${roll.toInt()}°',
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
-                fontSize: 10,
+                fontSize: InstrumentConstants.instrumentValueFontSize,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -76,6 +94,7 @@ class CoordenadorWidget extends StatelessWidget {
   }
 }
 
+/// Custom painter for the turn coordinator.
 class CoordenadorPainter extends CustomPainter {
   final double roll;
   final double turnRate;
@@ -94,185 +113,209 @@ class CoordenadorPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
 
-    // Fundo
+    // Background
     final bgPaint = Paint()
       ..color = Colors.grey.shade800
       ..style = PaintingStyle.fill;
     canvas.drawCircle(center, radius, bgPaint);
 
-    // Borda
+    // Border
     final borderPaint = Paint()
       ..color = Colors.teal
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
+      ..strokeWidth = InstrumentConstants.instrumentBorderWidth;
     canvas.drawCircle(center, radius, borderPaint);
 
-    // LINHAS DE REFERÊNCIA (horizonte e ângulos)
+    // REFERENCE LINES (horizon and angles)
     final horizonPaint = Paint()
-      ..color = Colors.white.withOpacity(0.3)
+      ..color = Colors.white.withValues(alpha: 0.3)
       ..strokeWidth = 1
       ..style = PaintingStyle.stroke;
     
-    // Linha horizontal central (0°/180°)
+    // Horizontal center line (0°/180°)
+    final horizonWidth = radius * InstrumentConstants.coordenadorHorizonLineWidth;
     canvas.drawLine(
-      Offset(center.dx - radius * 0.6, center.dy),
-      Offset(center.dx + radius * 0.6, center.dy),
+      Offset(center.dx - horizonWidth, center.dy),
+      Offset(center.dx + horizonWidth, center.dy),
       horizonPaint,
     );
 
-    // Linhas diagonais de referência (~30° e ~330°)
-    final double angle30 = 30 * pi / 180;
+    // Diagonal reference lines (~30° and ~330°)
+    final angle30 = InstrumentConstants.coordenadorDiagonalReferenceAngle * pi / 180;
+    final innerPos = radius * InstrumentConstants.coordenadorDiagonalReferenceInnerPosition;
+    final outerPos = radius * InstrumentConstants.coordenadorDiagonalReferenceOuterPosition;
+    
     canvas.drawLine(
-      Offset(center.dx - radius * 0.5 * cos(angle30), center.dy - radius * 0.5 * sin(angle30)),
-      Offset(center.dx - radius * 0.6 * cos(angle30), center.dy - radius * 0.6 * sin(angle30)),
+      Offset(center.dx - innerPos * cos(angle30), center.dy - innerPos * sin(angle30)),
+      Offset(center.dx - outerPos * cos(angle30), center.dy - outerPos * sin(angle30)),
       horizonPaint,
     );
     
     canvas.drawLine(
-      Offset(center.dx + radius * 0.5 * cos(angle30), center.dy - radius * 0.5 * sin(angle30)),
-      Offset(center.dx + radius * 0.6 * cos(angle30), center.dy - radius * 0.6 * sin(angle30)),
+      Offset(center.dx + innerPos * cos(angle30), center.dy - innerPos * sin(angle30)),
+      Offset(center.dx + outerPos * cos(angle30), center.dy - outerPos * sin(angle30)),
       horizonPaint,
     );
 
-    // MARCAS L/R (Standard Rate Turn - verticais nas laterais)
+    // L/R MARKS (Standard Rate Turn - vertical marks on sides)
     final markPaint = Paint()
       ..color = Colors.white
-      ..strokeWidth = 3
+      ..strokeWidth = InstrumentConstants.coordenadorStandardRateMarkStrokeWidth
       ..style = PaintingStyle.stroke;
 
-    // Marca L (esquerda)
+    final markPos = radius * InstrumentConstants.coordenadorStandardRateMarkPosition;
+    final markHeight = radius * InstrumentConstants.coordenadorStandardRateMarkWidth;
+
+    // L mark (left)
     canvas.drawLine(
-      Offset(center.dx - radius * 0.65, center.dy - radius * 0.08),
-      Offset(center.dx - radius * 0.65, center.dy + radius * 0.08),
+      Offset(center.dx - markPos, center.dy - markHeight),
+      Offset(center.dx - markPos, center.dy + markHeight),
       markPaint,
     );
 
-    // Marca R (direita)
+    // R mark (right)
     canvas.drawLine(
-      Offset(center.dx + radius * 0.65, center.dy - radius * 0.08),
-      Offset(center.dx + radius * 0.65, center.dy + radius * 0.08),
+      Offset(center.dx + markPos, center.dy - markHeight),
+      Offset(center.dx + markPos, center.dy + markHeight),
       markPaint,
     );
 
-    // SILHUETA DO AVIÃO (vista de trás)
+    // AIRPLANE SILHOUETTE (rear view)
     _drawAirplaneSilhouette(canvas, center, radius);
 
-    // INCLINÔMETRO (Ball) - parte inferior
+    // INCLINOMETER (Ball) - bottom section
     _drawInclinometer(canvas, center, radius);
 
-    // Texto L/R (próximo da borda, mais abaixo)
-    _drawText(canvas, 'L', Offset(center.dx - radius * 0.78, center.dy + radius * 0.12));
-    _drawText(canvas, 'R', Offset(center.dx + radius * 0.78, center.dy + radius * 0.12));
+    // L/R text (near border, lower position)
+    final textOffset = radius * InstrumentConstants.coordenadorTextHorizontalOffset;
+    final textVertical = center.dy + radius * InstrumentConstants.coordenadorTextVerticalOffset;
+    
+    _drawText(canvas, 'L', Offset(center.dx - textOffset, textVertical));
+    _drawText(canvas, 'R', Offset(center.dx + textOffset, textVertical));
   }
 
+  /// Draws the airplane silhouette (rear view).
   void _drawAirplaneSilhouette(Canvas canvas, Offset center, double radius) {
     canvas.save();
     canvas.translate(center.dx, center.dy);
     
-    // Rotacionar de acordo com o roll (SEM sinal negativo para sincronizar com horizonte)
+    // Rotate according to roll (matches horizon rotation)
     canvas.rotate(roll * pi / 180);
 
     final planePaint = Paint()
       ..color = Colors.white
-      ..strokeWidth = 4
+      ..strokeWidth = InstrumentConstants.coordenadorAirplaneStrokeWidth
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    // Dimensões do avião
-    double wingspan = radius * 0.5;
-    double fuselageWidth = radius * 0.06;
-    double fuselageHeight = radius * 0.18;
-    double tailWidth = radius * 0.18;
+    // Airplane dimensions
+    final wingspan = radius * InstrumentConstants.coordenadorAirplaneWingspan;
+    final fuselageHeight = radius * InstrumentConstants.coordenadorAirplaneFuselageHeight;
+    final tailWidth = radius * InstrumentConstants.coordenadorAirplaneTailWidth;
 
-    // ASAS (linha horizontal principal - bem visível)
+    // WINGS (main horizontal line - highly visible)
     canvas.drawLine(
       Offset(-wingspan, 0),
       Offset(wingspan, 0),
       planePaint,
     );
 
-    // FUSELAGEM (linha vertical central)
+    // FUSELAGE (vertical center line)
     canvas.drawLine(
       Offset(0, fuselageHeight / 2),
       Offset(0, -fuselageHeight),
       planePaint,
     );
 
-    // ESTABILIZADOR HORIZONTAL (cauda em T)
+    // HORIZONTAL STABILIZER (T-tail)
     canvas.drawLine(
       Offset(-tailWidth / 2, -fuselageHeight),
       Offset(tailWidth / 2, -fuselageHeight),
       planePaint,
     );
 
-    // CENTRO (ponto de referência)
+    // CENTER (reference point)
     final centerPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(0, 0), radius * 0.04, centerPaint);
+    final centerRadius = radius * InstrumentConstants.coordenadorAirplaneCenterRadius;
+    canvas.drawCircle(Offset(0, 0), centerRadius, centerPaint);
 
     canvas.restore();
   }
 
+  /// Draws the inclinometer (slip/skid ball).
   void _drawInclinometer(Canvas canvas, Offset center, double radius) {
-    // Calcular deslocamento lateral da bolinha
-    double rollRad = roll * pi / 180;
-    double lateralAccel = accelY * cos(rollRad) + accelX * sin(rollRad);
-    double ballOffset = (lateralAccel / 1.0).clamp(-1.0, 1.0) * radius * 0.3;
+    // Calculate ball lateral offset
+    final rollRad = roll * pi / 180;
+    final lateralAccel = accelY * cos(rollRad) + accelX * sin(rollRad);
+    final maxOffset = radius * InstrumentConstants.coordenadorBallMaxOffset;
+    final ballOffset = (lateralAccel / InstrumentConstants.coordenadorBallSensitivity)
+        .clamp(-1.0, 1.0) * maxOffset;
 
-    // Trilho (tubo curvo)
+    // Track (curved tube)
     final trackPaint = Paint()
       ..color = Colors.grey.shade600
       ..style = PaintingStyle.fill;
 
+    final trackWidth = radius * InstrumentConstants.coordenadorTrackWidth;
+    final trackHeight = radius * InstrumentConstants.coordenadorTrackHeight;
+    final trackY = center.dy + radius * InstrumentConstants.coordenadorTrackVerticalPosition;
+
     final trackRect = RRect.fromRectAndRadius(
       Rect.fromCenter(
-        center: Offset(center.dx, center.dy + radius * 0.55),
-        width: radius * 0.8,
-        height: radius * 0.15,
+        center: Offset(center.dx, trackY),
+        width: trackWidth,
+        height: trackHeight,
       ),
-      const Radius.circular(10),
+      Radius.circular(InstrumentConstants.coordenadorTrackCornerRadius),
     );
     canvas.drawRRect(trackRect, trackPaint);
 
-    // Bolinha preta
+    // Ball (black)
     final ballPaint = Paint()
       ..color = Colors.black
       ..style = PaintingStyle.fill;
 
+    final ballRadius = radius * InstrumentConstants.coordenadorBallRadius;
     canvas.drawCircle(
-      Offset(center.dx + ballOffset, center.dy + radius * 0.55),
-      radius * 0.08,
+      Offset(center.dx + ballOffset, trackY),
+      ballRadius,
       ballPaint,
     );
 
-    // Marcas de referência (limites de coordenação)
+    // Reference marks (coordination limits)
     final refPaint = Paint()
       ..color = Colors.white
-      ..strokeWidth = 2
+      ..strokeWidth = InstrumentConstants.coordenadorReferenceMarkStrokeWidth
       ..style = PaintingStyle.stroke;
 
+    final refSpacing = radius * InstrumentConstants.coordenadorReferenceMarkSpacing;
+    final refStart = center.dy + radius * InstrumentConstants.coordenadorReferenceMarkStart;
+    final refEnd = center.dy + radius * InstrumentConstants.coordenadorReferenceMarkEnd;
+
     canvas.drawLine(
-      Offset(center.dx - radius * 0.15, center.dy + radius * 0.47),
-      Offset(center.dx - radius * 0.15, center.dy + radius * 0.63),
+      Offset(center.dx - refSpacing, refStart),
+      Offset(center.dx - refSpacing, refEnd),
       refPaint,
     );
 
     canvas.drawLine(
-      Offset(center.dx + radius * 0.15, center.dy + radius * 0.47),
-      Offset(center.dx + radius * 0.15, center.dy + radius * 0.63),
+      Offset(center.dx + refSpacing, refStart),
+      Offset(center.dx + refSpacing, refEnd),
       refPaint,
     );
   }
 
+  /// Draws text at the specified position.
   void _drawText(Canvas canvas, String text, Offset position) {
     final textPainter = TextPainter(
       text: TextSpan(
         text: text,
-        style: const TextStyle(
+        style: TextStyle(
           color: Colors.white,
-          fontSize: 16,
+          fontSize: InstrumentConstants.coordenadorTextFontSize,
           fontWeight: FontWeight.bold,
         ),
       ),
