@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import '../../core/utils/logger.dart';
 
 class WebSocketService {
   WebSocketChannel? _channel;
@@ -18,7 +19,7 @@ class WebSocketService {
       _channel = WebSocketChannel.connect(uri);
       _isConnected = true;
 
-      print('✅ Conectado ao ESP32: $ipAddress');
+      Logger.info('Conectado ao ESP32: $ipAddress', 'WebSocket');
 
       // Escutar mensagens
       _channel!.stream.listen(
@@ -26,22 +27,22 @@ class WebSocketService {
           try {
             final data = jsonDecode(message);
             _dataController.add(data);
-            print('📥 Dados recebidos: $data');
+            Logger.debug('Dados recebidos: $data', 'WebSocket');
           } catch (e) {
-            print('❌ Erro ao decodificar: $e');
+            Logger.error('Erro ao decodificar mensagem', e, null, 'WebSocket');
           }
         },
         onError: (error) {
-          print('❌ Erro na conexão: $error');
+          Logger.error('Erro na conexão', error, null, 'WebSocket');
           _isConnected = false;
         },
         onDone: () {
-          print('⚠️ Conexão fechada');
+          Logger.warning('Conexão fechada', 'WebSocket');
           _isConnected = false;
         },
       );
     } catch (e) {
-      print('❌ Falha ao conectar: $e');
+      Logger.error('Falha ao conectar', e, null, 'WebSocket');
       _isConnected = false;
     }
   }
@@ -50,7 +51,7 @@ class WebSocketService {
   void sendData(String message) {
     if (_isConnected && _channel != null) {
       _channel!.sink.add(message);
-      print('📤 Enviado: $message');
+      Logger.debug('Enviado: $message', 'WebSocket');
     }
   }
 
@@ -58,7 +59,7 @@ class WebSocketService {
   void disconnect() {
     _channel?.sink.close();
     _isConnected = false;
-    print('🔌 Desconectado');
+    Logger.info('Desconectado', 'WebSocket');
   }
 
   void dispose() {

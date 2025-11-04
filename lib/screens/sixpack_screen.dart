@@ -11,6 +11,7 @@ import '../widgets/altimetro_widget.dart';
 import '../widgets/bussola_widget.dart';
 import '../widgets/coordenador_widget.dart';
 import '../widgets/variometro_widget.dart';
+import '../core/utils/logger.dart';
 import 'connection_screen.dart';
 import 'resumo_screen.dart';
 
@@ -19,10 +20,10 @@ class SixPackScreen extends StatefulWidget {
   final CalibrationService? calibrationService;
 
   const SixPackScreen({
-    Key? key,
+    super.key,
     required this.wsService,
     this.calibrationService,
-  }) : super(key: key);
+  });
 
   @override
   State<SixPackScreen> createState() => _SixPackScreenState();
@@ -60,9 +61,9 @@ class _SixPackScreenState extends State<SixPackScreen> {
   double accelY = 0;
   
   // Offsets de calibração (ajustar quando parado)
-  double _gyroZOffset = 0;
-  double _accelXOffset = 0;
-  double _accelYOffset = 0;
+  final double _gyroZOffset = 0;
+  final double _accelXOffset = 0;
+  final double _accelYOffset = 0;
 
   // Estatísticas do voo
   DateTime? _inicioVoo;
@@ -97,43 +98,43 @@ class _SixPackScreenState extends State<SixPackScreen> {
 
     _subscription = widget.wsService.dataStream.listen((data) {
       if (mounted) {
-        // DEBUG: Mostrar dados formatados no console
-        print('\n' + '='*60);
-        print('📥 DADOS DO ESP32:');
-        print('='*60);
-        print('🎯 INSTRUMENTOS PRINCIPAIS:');
-        print('   Velocidade: ${data['velocidade']} km/h');
-        print('   Altitude: ${data['altitude']} m (${data['altitude_ft']} ft)');
-        print('   Heading: ${data['heading']}°');
-        print('   Pitch: ${data['pitch']}°');
-        print('   Roll: ${data['roll']}°');
-        print('   Variômetro: ${data['variometro']} m/s (${data['variometro_ft']} ft/min)');
-        print('');
-        print('🌡️  AMBIENTE:');
-        print('   Temperatura: ${data['temperatura']}°C');
-        print('   Pressão: ${data['pressao']} Pa (${(data['pressao']/100).toStringAsFixed(0)} hPa)');
-        print('');
-        print('🛰️  GPS:');
-        print('   Lat: ${data['lat']}');
-        print('   Lng: ${data['lng']}');
-        print('   Satélites: ${data['satelites']}');
-        print('   HDOP: ${data['hdop']}');
-        print('');
-        print('🔄 GIROSCÓPIOS:');
-        print('   L3G4200D → X:${data['gyro_x']} Y:${data['gyro_y']} Z:${data['gyro_z']}');
-        print('   LSM6DS3  → X:${data['lsm_gx']}°/s Y:${data['lsm_gy']}°/s Z:${data['lsm_gz']}°/s');
-        print('');
-        print('📐 ACELERÔMETROS:');
-        print('   ADXL345  → X:${data['acel_x']} Y:${data['acel_y']} Z:${data['acel_z']}');
-        print('   LSM6DS3  → X:${data['lsm_ax']}g Y:${data['lsm_ay']}g Z:${data['lsm_az']}g');
-        print('');
-        print('🎛️  COORDENADOR DE CURVA (dados usados):');
-        print('   Roll (agulha): ${data['roll']}°');
-        print('   Accel X (bolinha): ${data['lsm_ax']}g');
-        print('   Accel Y (bolinha): ${data['lsm_ay']}g');
-        print('   Taxa Giro (ref): ${data['lsm_gz']}°/s');
-        print('='*60 + '\n');
+        // Log structured flight data
+        Logger.debug(
+          'INSTRUMENTOS → Vel:${data['velocidade']}km/h Alt:${data['altitude']}m '
+          'Hdg:${data['heading']}° Pitch:${data['pitch']}° Roll:${data['roll']}° '
+          'Vario:${data['variometro']}m/s',
+          'SixPack'
+        );
         
+        Logger.debug(
+          'AMBIENTE → Temp:${data['temperatura']}°C Press:${data['pressao']}Pa '
+          '(${(data['pressao']/100).toStringAsFixed(0)}hPa)',
+          'SixPack'
+        );
+        
+        Logger.debug(
+          'GPS → Lat:${data['lat']} Lng:${data['lng']} '
+          'Sat:${data['satelites']} HDOP:${data['hdop']}',
+          'SixPack'
+        );
+        
+        Logger.debug(
+          'GYROS → L3G[X:${data['gyro_x']} Y:${data['gyro_y']} Z:${data['gyro_z']}] '
+          'LSM[X:${data['lsm_gx']}°/s Y:${data['lsm_gy']}°/s Z:${data['lsm_gz']}°/s]',
+          'SixPack'
+        );
+        
+        Logger.debug(
+          'ACCEL → ADXL[X:${data['acel_x']} Y:${data['acel_y']} Z:${data['acel_z']}] '
+          'LSM[X:${data['lsm_ax']}g Y:${data['lsm_ay']}g Z:${data['lsm_az']}g]',
+          'SixPack'
+        );
+        
+        Logger.debug(
+          'COORDENADOR → Roll:${data['roll']}° AccelX:${data['lsm_ax']}g '
+          'AccelY:${data['lsm_ay']}g TaxaGiro:${data['lsm_gz']}°/s',
+          'SixPack'
+        );
         setState(() {
           // 1. Converter dados recebidos para formato do smoothing
           Map<String, double> rawData = {

@@ -3,12 +3,12 @@
 /// This model contains all sensor readings from the ESP32 and serves as
 /// the single source of truth for flight data throughout the application.
 ///
-/// Replaces the old Map<String, double> approach with type-safe properties.
+/// Replaces the old Map&lt;String, double&gt; approach with type-safe properties.
 class FlightData {
   /// Airspeed in km/h
   final double velocidade;
 
-  /// Altitude in meters (AGL or MSL depending on calibration)
+  /// Altitude in meters (AGL or MSL depending on calibration).
   final double altitude;
 
   /// Magnetic heading in degrees (0-360)

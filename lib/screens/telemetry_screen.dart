@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import '../services/websocket/websocket_service.dart';
 import 'sixpack_screen.dart';
 
+/// Telemetry screen for monitoring real-time ESP32 data.
+///
+/// Displays basic flight parameters before entering full sixpack mode.
+/// Allows connection/disconnection from ESP32 WebSocket.
 class TelemetryScreen extends StatefulWidget {
-  const TelemetryScreen({Key? key}) : super(key: key);
+  const TelemetryScreen({super.key});
 
   @override
   State<TelemetryScreen> createState() => _TelemetryScreenState();
@@ -25,6 +29,8 @@ class _TelemetryScreenState extends State<TelemetryScreen> {
     
     // Escutar dados do WebSocket
     _wsService.dataStream.listen((data) {
+      if (!mounted) return;
+      
       setState(() {
         _altitude = data['altitude']?.toDouble() ?? 0.0;
         _velocidade = data['velocidade']?.toDouble() ?? 0.0;

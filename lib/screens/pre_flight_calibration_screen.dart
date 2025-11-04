@@ -3,13 +3,19 @@ import '../services/websocket/websocket_service.dart';
 import '../services/calibration/calibration_service.dart';
 import 'sixpack_screen.dart';
 
+/// Pre-flight calibration screen for instrument setup.
+///
+/// Allows pilot to:
+/// - Calibrate compass heading
+/// - Zero pitch and roll (level flight)
+/// - Zero altitude (QNH setting)
 class PreFlightCalibrationScreen extends StatefulWidget {
   final WebSocketService wsService;
 
   const PreFlightCalibrationScreen({
-    Key? key,
+    super.key,
     required this.wsService,
-  }) : super(key: key);
+  });
 
   @override
   State<PreFlightCalibrationScreen> createState() => _PreFlightCalibrationScreenState();
@@ -97,7 +103,7 @@ class _PreFlightCalibrationScreenState extends State<PreFlightCalibrationScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(color: Colors.blue),
+              const CircularProgressIndicator(color: Colors.blue),
               const SizedBox(height: 20),
               Text(
                 '📡 Aguardando dados do ESP32...',
@@ -138,10 +144,10 @@ class _PreFlightCalibrationScreenState extends State<PreFlightCalibrationScreen>
                         // Header
                         Center(
                           child: Column(
-                            children: [
+                            children: const [
                               Icon(Icons.settings, color: Colors.blue, size: 48),
-                              const SizedBox(height: 8),
-                              const Text(
+                              SizedBox(height: 8),
+                              Text(
                                 'CHECKLIST PRÉ-VOO',
                                 style: TextStyle(
                                   color: Colors.white,
@@ -314,10 +320,10 @@ class _PreFlightCalibrationScreenState extends State<PreFlightCalibrationScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: [
+            children: const [
               Icon(Icons.explore, color: Colors.purple, size: 20),
-              const SizedBox(width: 8),
-              const Text(
+              SizedBox(width: 8),
+              Text(
                 'Calibrar Bússola',
                 style: TextStyle(
                   color: Colors.white,
@@ -337,7 +343,7 @@ class _PreFlightCalibrationScreenState extends State<PreFlightCalibrationScreen>
               hintStyle: TextStyle(color: Colors.grey.shade500),
               suffixText: '°',
               suffixStyle: const TextStyle(color: Colors.white),
-              prefixIcon: Icon(Icons.navigation, color: Colors.purple),
+              prefixIcon: const Icon(Icons.navigation, color: Colors.purple),
               filled: true,
               fillColor: Colors.grey.shade800,
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
