@@ -1559,49 +1559,68 @@ Pós-MVP:
 
 ### 🏃 Prioridades Desenvolvimento
 
+## 🏃 CRONOGRAMA DESENVOLVIMENTO - 6 MESES (12 SPRINTS)
+
+### 📅 FASE 1: DESENVOLVIMENTO MVP (3 meses)
 ```
-Sprint 1 (2 semanas):
-  1. Setup Supabase Auth
-  2. Implementar PostgreSQL v3 (sem particionamento)
-  3. N8N workflows básicos (8 workflows)
-  4. Corrigir JSON ESP32 (remover bateria)
+Sprint 1-2 (Semanas 1-4) - 🏗️ FUNDAÇÃO
+├─ Backend: Supabase + PostgreSQL + N8N (3 workflows) + Redis
+├─ Mobile: Scaffold + Login + Dashboard + WebSocket mock
+└─ Web: Scaffold + Login + Layout base
 
-Sprint 2 (2 semanas):
-  5. Mobile: Telas principais (15)
-  6. Mobile: Conexão ESP32
-  7. Mobile: Gravação local
-  8. Mobile: Bateria monitoring tablet
+Sprint 3-4 (Semanas 5-8) - 📱 CORE MOBILE
+├─ Backend: Workflows sync voo + CIV sandbox + API REST
+├─ Mobile: Offline-first + Sixpack + Telemetria + Bateria tablet
+└─ Web: Portal Gestor (CRUD alunos/instrutores/aeronaves)
 
-Sprint 3 (2 semanas):
-  9. Mobile: Avaliação FAP
-  10. Mobile: Checklist digital
-  11. Backend: CIV ANAC (sandbox)
-  12. Backend: Diário bordo logs
-
-Sprint 4 (2 semanas):
-  13. Web: Portal Gestor (CRUD)
-  14. Web: Portal Admin (métricas avançadas)
-  15. Web: Live Tracking (global + aeroclube)
-  16. Backend: WiFi loss logging
-
-Sprint 5 (2 semanas):
-  17. Web: Replay 2D (Leaflet MVP)
-  18. Web: Portal Aluno (simplificado)
-  19. Mobile: Agenda instrutor
-  20. Testes integração
-
-Sprint 6 (2 semanas):
-  21. Beta testing aeroclube piloto
-  22. Refinamentos UX
-  23. Performance otimização
-  24. Backup automation
-
-Sprint 7+ (iterações):
-  25. Homologação ANAC
-  26. ANAC produção
-  27. Expansão features pós-MVP
+Sprint 5-6 (Semanas 9-12) - 🌐 CORE WEB + INTEGRAÇÃO
+├─ Backend: CIV retry + Notificações + Workflows completos (6)
+├─ Mobile: Checklist + Fotos + Avaliação FAP + Sync 4G
+└─ Web: 4 Portais + Replay 2D + Live tracking + CIV digital
 ```
 
+---
+
+### 📅 FASE 2: VALIDAÇÃO + PRODUÇÃO (3 meses)
+```
+Sprint 7-8 (Semanas 13-16) - 🧪 BETA TESTING REAL
+├─ Hardware: 2 ESP32 instalados + Manual instalação
+├─ Operacional: Treinar 3 instrutores + 20 voos reais
+└─ Refinamento: Bugs P0/P1 + UX feedback + Performance
+
+Sprint 9-10 (Semanas 17-20) - 🔒 HOMOLOGAÇÃO + SECURITY
+├─ ANAC: Sandbox → Produção + Certificado ICP + Aprovação
+├─ Security: Pentest + LGPD + Backup geo + Audit logs
+└─ Performance: Load test 1k users + 99.9% uptime
+
+Sprint 11-12 (Semanas 21-24) - 🚀 PRODUÇÃO + GO-LIVE
+├─ Deploy: Vercel + Railway + Supabase + Redis + S3 (prod)
+├─ Monitoring: Sentry + Grafana + PagerDuty + StatusPage
+└─ 🎉 GO-LIVE: Aeroclube piloto ativo + Marketing + Vendas
+```
+
+---
+
+### 📊 TIMELINE VISUAL
+```
+MÊS 1-2  │████████│ Backend + Mobile base
+MÊS 3    │████████│ Web + Integração completa → MVP funcional ✅
+MÊS 4    │████████│ Beta testing + Hardware real
+MÊS 5    │████████│ ANAC produção + Security audit
+MÊS 6    │████████│ Deploy produção + Go-Live 🎉
+```
+
+---
+
+### 🎯 MILESTONES CRÍTICOS
+```yaml
+✅ Semana 4:  Mobile offline funcional
+✅ Semana 8:  Telemetria 20Hz + Sixpack
+✅ Semana 12: MVP completo (4 portais + CIV)
+✅ Semana 16: 20 voos reais validados
+✅ Semana 20: ANAC homologado ✅
+✅ Semana 24: PRODUÇÃO ATIVA 🚀
+```
 ---
 
 ## 📚 GLOSSÁRIO
