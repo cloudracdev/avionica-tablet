@@ -203,11 +203,24 @@ class AltimetroPainter extends CustomPainter {
     canvas.translate(center.dx, center.dy);
     canvas.rotate(radian);
 
-    // Small triangle pointer
+    // Thin long needle (stem)
+    final needlePaint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawLine(
+      Offset(0, radius * 0.08),
+      Offset(0, -radius * 0.75),
+      needlePaint,
+    );
+
+    // Triangle at tip
     final trianglePath = Path()
-      ..moveTo(0, -radius * 0.25)
-      ..lineTo(-radius * 0.025, -radius * 0.18)
-      ..lineTo(radius * 0.025, -radius * 0.18)
+      ..moveTo(0, -radius * 0.75)
+      ..lineTo(-radius * 0.035, -radius * 0.68)
+      ..lineTo(radius * 0.035, -radius * 0.68)
       ..close();
 
     canvas.drawPath(
