@@ -13,6 +13,9 @@ class TelemetryTestScreen extends ConsumerWidget {
     // 📡 Observar telemetria processada
     final telemetry = ref.watch(telemetryProvider);
     
+    // 📡 Observar frequência (Hz)
+    final hz = ref.watch(telemetryHzProvider);
+    
     // 📡 Observar estado de conexão
     final isConnected = ref.watch(connectionStateProvider);
 
@@ -41,6 +44,33 @@ class TelemetryTestScreen extends ConsumerWidget {
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                // 📊 FREQUÊNCIA (Hz)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: hz >= 18
+                        ? Colors.green
+                        : hz >= 10
+                            ? Colors.orange
+                            : Colors.red,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.speed, color: Colors.white, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        '$hz Hz',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

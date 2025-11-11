@@ -8,9 +8,15 @@ class WebSocketService {
   final _dataController = StreamController<Map<String, dynamic>>.broadcast();
   bool _isConnected = false;
 
+  // 📊 Contador de pacotes recebidos
+  int _packetCount = 0;
+  int _lastSecond = 0;
+  int _currentPacketsPerSecond = 0;
+
   // Stream para ouvir dados recebidos
   Stream<Map<String, dynamic>> get dataStream => _dataController.stream;
   bool get isConnected => _isConnected;
+  int get packetsPerSecond => _currentPacketsPerSecond;
 
   // Conectar ao ESP32
   void connect(String ipAddress) {
@@ -25,9 +31,23 @@ class WebSocketService {
       _channel!.stream.listen(
         (message) {
           try {
+            // 📊 Contar pacotes por segundo
+            final currentSecond = DateTime.now().second;
+            if (currentSecond != _lastSecond) {
+              _currentPacketsPerSecond = _packetCount;
+              if (_packetCount > 0) {
+                Logger.info('📊 Recebendo $_packetCount pacotes/s', 'WebSocket');
+              }
+              _packetCount = 0;
+              _lastSecond = currentSecond;
+            }
+            _packetCount++;
+
             final data = jsonDecode(message);
             _dataController.add(data);
-            Logger.debug('Dados recebidos: $data', 'WebSocket');
+            
+            // ✅ Log reduzido: apenas a cada segundo
+            // Logger.debug('Dados recebidos: $data', 'WebSocket');
           } catch (e) {
             Logger.error('Erro ao decodificar mensagem', e, null, 'WebSocket');
           }
@@ -59,6 +79,8 @@ class WebSocketService {
   void disconnect() {
     _channel?.sink.close();
     _isConnected = false;
+    _packetCount = 0;
+    _currentPacketsPerSecond = 0;
     Logger.info('Desconectado', 'WebSocket');
   }
 
