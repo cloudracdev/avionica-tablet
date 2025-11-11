@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/constants/app_constants.dart';
 // import 'screens/login_screen.dart'; // ⏸️ Desabilitado temporariamente
-import 'screens/websocket_test_screen.dart'; // 🧪 STEP 2 TEST
+import 'screens/telemetry_test_screen.dart'; // 🧪 STEP 3 TEST
 
 void main() {
   runApp(
@@ -27,9 +27,9 @@ class MyApp extends StatelessWidget {
         brightness: Brightness.light,
         useMaterial3: true,
       ),
-      // 🧪 STEP 2: Tela de teste WebSocket
-      home: const WebSocketTestScreen(),
-      // home: const LoginScreen(), // ⏸️ Voltará no STEP 5
+      // 🧪 STEP 3: Tela de teste Telemetry Provider
+      home: const TelemetryTestScreen(),
+      // 📝 TODO STEP 5: Fluxo direto ConnectionScreen → CalibrationDialog → SixPackScreen
     );
   }
 }
