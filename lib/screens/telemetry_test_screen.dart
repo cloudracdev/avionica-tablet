@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/telemetry_provider.dart';
 import '../providers/websocket_provider.dart';
+import '../providers/flight_stats_provider.dart';
 
-/// 🧪 TELA DE TESTE - STEP 3
-/// Valida se o Telemetry Provider está processando dados corretamente
+/// 🧪 TELA DE TESTE - STEP 3 + 4
+/// Valida Telemetry Provider + Flight Stats Provider
 class TelemetryTestScreen extends ConsumerWidget {
   const TelemetryTestScreen({super.key});
 
@@ -15,6 +16,9 @@ class TelemetryTestScreen extends ConsumerWidget {
     
     // 📡 Observar frequência (Hz)
     final hz = ref.watch(telemetryHzProvider);
+    
+    // 📊 Observar estatísticas de voo
+    final stats = ref.watch(flightStatsProvider);
     
     // 📡 Observar estado de conexão
     final isConnected = ref.watch(connectionStateProvider);
@@ -124,6 +128,21 @@ class TelemetryTestScreen extends ConsumerWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  const SizedBox(height: 16),
+
+                  // 📈 ESTATÍSTICAS DO VOO
+                  _buildSection(
+                    '📈 ESTATÍSTICAS (Duração: ${_formatDuration(stats.duration)})',
+                    [
+                      _buildDataRow('Vel Máx', '${stats.velocidadeMax.toStringAsFixed(1)} km/h', Colors.blue),
+                      _buildDataRow('Alt Máx', '${stats.altitudeMax.toStringAsFixed(1)} m', Colors.green),
+                      _buildDataRow('Pitch', '${stats.pitchMin.toStringAsFixed(1)}° / ${stats.pitchMax.toStringAsFixed(1)}°', Colors.purple),
+                      _buildDataRow('Roll', '${stats.rollMin.toStringAsFixed(1)}° / ${stats.rollMax.toStringAsFixed(1)}°', Colors.pink),
+                      _buildDataRow('Vario', '${stats.varioMin.toStringAsFixed(1)} / ${stats.varioMax.toStringAsFixed(1)} m/s', Colors.teal),
+                      _buildDataRow('Temp', '${stats.temperaturaMin.toStringAsFixed(1)} / ${stats.temperaturaMax.toStringAsFixed(1)}°C', Colors.red),
+                    ],
+                  ),
+
                   const SizedBox(height: 16),
 
                   // 🛩️ Instrumentos principais
@@ -242,5 +261,19 @@ class TelemetryTestScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    final seconds = duration.inSeconds.remainder(60);
+    
+    if (hours > 0) {
+      return '${hours}h ${minutes}m ${seconds}s';
+    } else if (minutes > 0) {
+      return '${minutes}m ${seconds}s';
+    } else {
+      return '${seconds}s';
+    }
   }
 }
