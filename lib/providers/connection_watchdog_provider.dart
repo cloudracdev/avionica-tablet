@@ -11,6 +11,9 @@ final connectionWatchdogProvider = Provider<ConnectionWatchdog>((ref) {
   return ConnectionWatchdog(ref);
 });
 
+/// 🎯 PROVIDER: Callback para notificações
+final watchdogNotificationProvider = StateProvider<String?>((ref) => null);
+
 /// 🐕 WATCHDOG: Monitora conexão e reconecta automaticamente
 class ConnectionWatchdog {
   final Ref _ref;
@@ -74,6 +77,8 @@ class ConnectionWatchdog {
         'Watchdog',
       );
       _ref.read(connectionStateProvider.notifier).state = false;
+      _ref.read(watchdogNotificationProvider.notifier).state = 
+          '❌ Conexão perdida após $_maxReconnectAttempts tentativas';
       return;
     }
 
@@ -82,6 +87,10 @@ class ConnectionWatchdog {
       '🔄 Tentativa de reconexão $_reconnectAttempts/$_maxReconnectAttempts',
       'Watchdog',
     );
+
+    // ✅ NOTIFICAR USUÁRIO
+    _ref.read(watchdogNotificationProvider.notifier).state = 
+        '🔄 Reconectando automaticamente... (tentativa $_reconnectAttempts/$_maxReconnectAttempts)';
 
     // Reconectar
     final wsService = _ref.read(webSocketServiceProvider);

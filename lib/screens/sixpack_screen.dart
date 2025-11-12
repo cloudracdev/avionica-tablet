@@ -31,6 +31,21 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen> {
     // 🐕 Inicializar watchdog de conexão
     Future.microtask(() {
       ref.read(connectionWatchdogProvider);
+      
+      // 🔔 Escutar notificações do watchdog
+      ref.listenManual(watchdogNotificationProvider, (previous, next) {
+        if (next != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(next),
+              duration: const Duration(seconds: 3),
+              backgroundColor: next.contains('❌') 
+                  ? Colors.red 
+                  : Colors.orange,
+            ),
+          );
+        }
+      });
     });
 
     // Permitir todas as orientações
@@ -45,12 +60,7 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen> {
   @override
   void dispose() {
     _pageController.dispose();
-    
-    // Restaurar apenas portrait
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-    ]);
-    
+    // ✅ NÃO FORÇA PORTRAIT - deixa como está
     super.dispose();
   }
 
@@ -104,19 +114,54 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen> {
           // ❌ Botão Desconectar e Voltar
           FloatingActionButton(
             heroTag: 'disconnect',
-            onPressed: () {
-              // Desconectar ESP32
-              final wsService = ref.read(webSocketServiceProvider);
-              wsService.disconnect();
-              ref.read(connectionStateProvider.notifier).state = false;
-              
-              // ✅ Voltar para ConnectionScreen (pushReplacement garante que vai)
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ConnectionScreen(),
+            onPressed: () async {
+              // Mostrar dialog de confirmação
+              final shouldDisconnect = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('⚠️ Desconectar'),
+                  content: const Text('Deseja desconectar do ESP32?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancelar'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Desconectar'),
+                    ),
+                  ],
                 ),
               );
+              
+              if (shouldDisconnect == true && mounted) {
+                // Desconectar ESP32
+                final wsService = ref.read(webSocketServiceProvider);
+                wsService.disconnect();
+                ref.read(connectionStateProvider.notifier).state = false;
+                
+                // Mostrar feedback
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('❌ Desconectado do ESP32'),
+                    duration: Duration(seconds: 2),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                
+                // Aguardar 500ms antes de navegar
+                await Future.delayed(const Duration(milliseconds: 500));
+                
+                if (mounted) {
+                  // Voltar para ConnectionScreen
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ConnectionScreen(),
+                    ),
+                  );
+                }
+              }
             },
             backgroundColor: Colors.red,
             child: const Icon(Icons.close),

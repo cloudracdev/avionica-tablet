@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/websocket_provider.dart';
 import 'sixpack_screen.dart';
@@ -16,6 +17,19 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
     text: '192.168.4.1', // IP padrão ESP32 AP Mode
   );
   bool _isConnecting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // ✅ PERMITIR TODAS AS ORIENTAÇÕES
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
 
   @override
   void dispose() {
