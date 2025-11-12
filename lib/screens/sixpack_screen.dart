@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/telemetry_provider.dart';
-import '../providers/flight_stats_provider.dart';
+import '../providers/websocket_provider.dart';
 import '../widgets/artificial_horizon.dart';
 import '../widgets/velocimetro_widget.dart';
 import '../widgets/altimetro_widget.dart';
 import '../widgets/bussola_widget.dart';
 import '../widgets/coordenador_widget.dart';
 import '../widgets/variometro_widget.dart';
-import 'resumo_screen.dart';
 
 /// 🎯 SixPack Screen - Tela principal de instrumentos
 /// Refatorado com Riverpod - apenas UI, zero lógica de negócio
@@ -52,9 +51,6 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen> {
   Widget build(BuildContext context) {
     // 📡 Observar telemetria processada
     final telemetry = ref.watch(telemetryProvider);
-    
-    // 📊 Observar estatísticas
-    final stats = ref.watch(flightStatsProvider);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -70,26 +66,44 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen> {
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 📊 Botão Resumo
+          // 🔄 Botão Reconectar
           FloatingActionButton(
-            heroTag: 'resumo',
+            heroTag: 'reconnect',
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ResumoScreen(stats: stats),
+              // Reconectar ESP32
+              final wsService = ref.read(webSocketServiceProvider);
+              final ip = ref.read(ipAddressProvider);
+              
+              wsService.disconnect();
+              Future.delayed(const Duration(milliseconds: 500), () {
+                wsService.connect(ip);
+                ref.read(connectionStateProvider.notifier).state = true;
+              });
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('🔄 Reconectando...'),
+                  duration: Duration(seconds: 1),
                 ),
               );
             },
             backgroundColor: Colors.blue,
-            child: const Icon(Icons.summarize),
+            child: const Icon(Icons.refresh),
           ),
           const SizedBox(height: 8),
           
-          // 🔙 Botão Voltar
+          // ❌ Botão Desconectar e Voltar
           FloatingActionButton(
-            heroTag: 'back',
-            onPressed: () => Navigator.pop(context),
+            heroTag: 'disconnect',
+            onPressed: () {
+              // Desconectar ESP32
+              final wsService = ref.read(webSocketServiceProvider);
+              wsService.disconnect();
+              ref.read(connectionStateProvider.notifier).state = false;
+              
+              // Voltar para ConnectionScreen
+              Navigator.pop(context);
+            },
             backgroundColor: Colors.red,
             child: const Icon(Icons.close),
           ),
