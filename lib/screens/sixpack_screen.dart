@@ -3,12 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/telemetry_provider.dart';
 import '../providers/websocket_provider.dart';
+import '../providers/connection_watchdog_provider.dart';
 import '../widgets/artificial_horizon.dart';
 import '../widgets/velocimetro_widget.dart';
 import '../widgets/altimetro_widget.dart';
 import '../widgets/bussola_widget.dart';
 import '../widgets/coordenador_widget.dart';
 import '../widgets/variometro_widget.dart';
+import 'connection_screen.dart';
 
 /// 🎯 SixPack Screen - Tela principal de instrumentos
 /// Refatorado com Riverpod - apenas UI, zero lógica de negócio
@@ -25,6 +27,11 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen> {
   @override
   void initState() {
     super.initState();
+
+    // 🐕 Inicializar watchdog de conexão
+    Future.microtask(() {
+      ref.read(connectionWatchdogProvider);
+    });
 
     // Permitir todas as orientações
     SystemChrome.setPreferredOrientations([
@@ -73,11 +80,13 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen> {
               // Reconectar ESP32
               final wsService = ref.read(webSocketServiceProvider);
               final ip = ref.read(ipAddressProvider);
+              final watchdog = ref.read(connectionWatchdogProvider);
               
               wsService.disconnect();
               Future.delayed(const Duration(milliseconds: 500), () {
                 wsService.connect(ip);
                 ref.read(connectionStateProvider.notifier).state = true;
+                watchdog.reset(); // ✅ Reset watchdog
               });
               
               ScaffoldMessenger.of(context).showSnackBar(
@@ -101,8 +110,13 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen> {
               wsService.disconnect();
               ref.read(connectionStateProvider.notifier).state = false;
               
-              // Voltar para ConnectionScreen
-              Navigator.pop(context);
+              // ✅ Voltar para ConnectionScreen (pushReplacement garante que vai)
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ConnectionScreen(),
+                ),
+              );
             },
             backgroundColor: Colors.red,
             child: const Icon(Icons.close),
