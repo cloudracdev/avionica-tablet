@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../controllers/sixpack_controller.dart';
 import '../providers/telemetry_provider.dart';
-import '../providers/websocket_provider.dart';
-import '../providers/connection_watchdog_provider.dart';
 import '../widgets/artificial_horizon.dart';
 import '../widgets/velocimetro_widget.dart';
 import '../widgets/altimetro_widget.dart';
 import '../widgets/bussola_widget.dart';
 import '../widgets/coordenador_widget.dart';
 import '../widgets/variometro_widget.dart';
-import 'connection_screen.dart';
 
 /// 🎯 SixPack Screen - Tela principal de instrumentos
-/// Refatorado com Riverpod - apenas UI, zero lógica de negócio
+/// 
+/// Apenas UI - lógica delegada ao SixPackController
 class SixPackScreen extends ConsumerStatefulWidget {
   const SixPackScreen({super.key});
 
@@ -28,39 +26,17 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen> {
   void initState() {
     super.initState();
 
-    // 🐕 Inicializar watchdog de conexão
+    // Inicializar controller após primeiro build
     Future.microtask(() {
-      ref.read(connectionWatchdogProvider);
-      
-      // 🔔 Escutar notificações do watchdog
-      ref.listenManual(watchdogNotificationProvider, (previous, next) {
-        if (next != null && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(next),
-              duration: const Duration(seconds: 3),
-              backgroundColor: next.contains('❌') 
-                  ? Colors.red 
-                  : Colors.orange,
-            ),
-          );
-        }
-      });
+      final controller = SixPackController(ref, context);
+      controller.initializeWatchdog();
+      controller.setupOrientations();
     });
-
-    // Permitir todas as orientações
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
   }
 
   @override
   void dispose() {
     _pageController.dispose();
-    // ✅ NÃO FORÇA PORTRAIT - deixa como está
     super.dispose();
   }
 
@@ -68,6 +44,9 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen> {
   Widget build(BuildContext context) {
     // 📡 Observar telemetria processada
     final telemetry = ref.watch(telemetryProvider);
+    
+    // Criar controller com ref/context atualizados para este build
+    final controller = SixPackController(ref, context);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -86,83 +65,16 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen> {
           // 🔄 Botão Reconectar
           FloatingActionButton(
             heroTag: 'reconnect',
-            onPressed: () {
-              // Reconectar ESP32
-              final wsService = ref.read(webSocketServiceProvider);
-              final ip = ref.read(ipAddressProvider);
-              final watchdog = ref.read(connectionWatchdogProvider);
-              
-              wsService.disconnect();
-              Future.delayed(const Duration(milliseconds: 500), () {
-                wsService.connect(ip);
-                ref.read(connectionStateProvider.notifier).state = true;
-                watchdog.reset(); // ✅ Reset watchdog
-              });
-              
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('🔄 Reconectando...'),
-                  duration: Duration(seconds: 1),
-                ),
-              );
-            },
+            onPressed: controller.reconnect,
             backgroundColor: Colors.blue,
             child: const Icon(Icons.refresh),
           ),
           const SizedBox(height: 8),
           
-          // ❌ Botão Desconectar e Voltar
+          // ❌ Botão Desconectar
           FloatingActionButton(
             heroTag: 'disconnect',
-            onPressed: () async {
-              // Mostrar dialog de confirmação
-              final shouldDisconnect = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('⚠️ Desconectar'),
-                  content: const Text('Deseja desconectar do ESP32?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancelar'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Desconectar'),
-                    ),
-                  ],
-                ),
-              );
-              
-              if (shouldDisconnect == true && mounted) {
-                // Desconectar ESP32
-                final wsService = ref.read(webSocketServiceProvider);
-                wsService.disconnect();
-                ref.read(connectionStateProvider.notifier).state = false;
-                
-                // Mostrar feedback
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('❌ Desconectado do ESP32'),
-                    duration: Duration(seconds: 2),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-                
-                // Aguardar 500ms antes de navegar
-                await Future.delayed(const Duration(milliseconds: 500));
-                
-                if (mounted) {
-                  // Voltar para ConnectionScreen
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ConnectionScreen(),
-                    ),
-                  );
-                }
-              }
-            },
+            onPressed: controller.disconnect,
             backgroundColor: Colors.red,
             child: const Icon(Icons.close),
           ),
