@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/telemetry_data.dart';
+import '../models/flight_data.dart';
 import '../services/calibration/calibration_service.dart';
-import '../services/data_processing/smoothing_service.dart';
-import '../services/websocket/websocket_service.dart';
+import '../data/repositories/telemetry_repository.dart';
+import '../data/repositories/websocket_telemetry_repository.dart';
 import 'websocket_provider.dart';
 
 /// 🎯 PROVIDER: Serviço de calibração (singleton)
@@ -11,19 +12,26 @@ final calibrationServiceProvider = Provider<CalibrationService>((ref) {
   return CalibrationService();
 });
 
-/// 🎯 PROVIDER: Serviço de suavização (singleton)
-final smoothingServiceProvider = Provider<SmoothingService>((ref) {
-  return SmoothingService();
+/// 🎯 PROVIDER: Repository de telemetria (singleton)
+final telemetryRepositoryProvider = Provider<TelemetryRepository>((ref) {
+  final wsService = ref.watch(webSocketServiceProvider);
+  final repository = WebSocketTelemetryRepository(wsService);
+  
+  // 🧹 Cleanup automático
+  ref.onDispose(() {
+    repository.dispose();
+  });
+  
+  return repository;
 });
 
 /// 🎯 PROVIDER: Telemetria processada (StateNotifier)
 final telemetryProvider = StateNotifierProvider<TelemetryNotifier, TelemetryData>((ref) {
-  final wsService = ref.watch(webSocketServiceProvider);
+  final repository = ref.watch(telemetryRepositoryProvider);
   
   return TelemetryNotifier(
-    wsService,
+    repository,
     ref.watch(calibrationServiceProvider),
-    ref.watch(smoothingServiceProvider),
   );
 });
 
@@ -34,12 +42,11 @@ final telemetryHzProvider = Provider<int>((ref) {
   return ref.read(telemetryProvider.notifier).currentHz;
 });
 
-/// 📡 NOTIFIER: Processa dados do WebSocket
+/// 📡 NOTIFIER: Processa dados do Repository
 class TelemetryNotifier extends StateNotifier<TelemetryData> {
-  final WebSocketService _wsService;
+  final TelemetryRepository _repository;
   final CalibrationService _calibration;
-  final SmoothingService _smoothing;
-  StreamSubscription<Map<String, dynamic>>? _subscription;
+  StreamSubscription<FlightData>? _subscription;
 
   // 📊 Controle do variômetro
   double _altitudePrevious = 0;
@@ -54,18 +61,18 @@ class TelemetryNotifier extends StateNotifier<TelemetryData> {
   int _lastSecond = 0;
   int _currentHz = 0;
 
-  TelemetryNotifier(this._wsService, this._calibration, this._smoothing)
+  TelemetryNotifier(this._repository, this._calibration)
       : super(TelemetryData.initial()) {
-    _listenToWebSocket();
+    _listenToRepository();
   }
 
   /// 📊 Getter para frequência atual
   int get currentHz => _currentHz;
 
-  /// 🎧 Escuta stream do WebSocket (DIRETO - sem ref.listen!)
-  void _listenToWebSocket() {
-    _subscription = _wsService.dataStream.listen((rawData) {
-      _processRawData(rawData);
+  /// 🎧 Escuta stream do Repository (FlightData type-safe!)
+  void _listenToRepository() {
+    _subscription = _repository.getFlightDataStream().listen((flightData) {
+      _processFlightData(flightData);
     });
   }
 
@@ -75,8 +82,8 @@ class TelemetryNotifier extends StateNotifier<TelemetryData> {
     super.dispose();
   }
 
-  /// ⚙️ Processa dados brutos do ESP32
-  void _processRawData(Map<String, dynamic> data) {
+  /// ⚙️ Processa FlightData do Repository
+  void _processFlightData(FlightData flightData) {
     // 📊 CALCULAR Hz (frames por segundo)
     final currentSecond = DateTime.now().second;
     if (currentSecond != _lastSecond) {
@@ -86,49 +93,29 @@ class TelemetryNotifier extends StateNotifier<TelemetryData> {
     }
     _frameCount++;
 
-    // 1️⃣ CONVERTER para Map<String, double>
-    Map<String, double> rawData = {
-      'velocidade': _toDouble(data['velocidade']),
-      'altitude': _toDouble(data['altitude']),
-      'heading': _toDouble(data['heading']),
-      'pitch': _toDouble(data['pitch']),
-      'roll': _toDouble(data['roll']),
-      'temperatura': _toDouble(data['temperatura']),
-      'pressao': _toDouble(data['pressao']),
-      'lat': _toDouble(data['lat']),
-      'lng': _toDouble(data['lng']),
-    };
-
-    // 2️⃣ 🔥 TESTE: SMOOTHING DESABILITADO (usar dados diretos)
-    Map<String, double> smoothData = rawData;
-    // Map<String, double> smoothData = _smoothing.smoothData(rawData); // ← ORIGINAL
-
-    // 3️⃣ 🔥 TESTE: CALIBRAÇÃO DESABILITADA (usar dados diretos)
-    final velocidade = smoothData['velocidade']!;
-    final altitude = smoothData['altitude']!;
-    final heading = smoothData['heading']!;
-    final pitch = smoothData['pitch']!;
-    final roll = smoothData['roll']!;
+    // 🔥 TESTE: CALIBRAÇÃO DESABILITADA (usar dados diretos)
+    final velocidade = flightData.velocidade;
+    final altitude = flightData.altitude;
+    final heading = flightData.heading;
+    final pitch = flightData.pitch;
+    final roll = flightData.roll;
     
     // ORIGINAL (comentado para teste):
-    // final velocidade = smoothData['velocidade']!;
-    // final altitude = _calibration.applyCalibratedAltitude(smoothData['altitude']!);
-    // final heading = _calibration.applyCalibratedHeading(smoothData['heading']!);
-    // final pitch = _calibration.applyCalibratedPitch(smoothData['pitch']!);
-    // final roll = _calibration.applyCalibratedRoll(smoothData['roll']!);
+    // final altitude = _calibration.applyCalibratedAltitude(flightData.altitude);
+    // final heading = _calibration.applyCalibratedHeading(flightData.heading);
+    // final pitch = _calibration.applyCalibratedPitch(flightData.pitch);
+    // final roll = _calibration.applyCalibratedRoll(flightData.roll);
 
-    // 4️⃣ 🔥 TESTE: VARIÔMETRO DESABILITADO (sempre 0)
+    // 🔥 TESTE: VARIÔMETRO DESABILITADO (sempre 0)
     final vario = 0.0;
     
     // ORIGINAL (comentado para teste):
     // final vario = _calculateVario(altitude);
 
-    // 5️⃣ PROCESSAR COORDENADOR DE CURVA
-    final gyroZ = _toDouble(data['lsm_gz']);
-    final accelX = _toDouble(data['lsm_ax']);
-    final accelY = _toDouble(data['lsm_ay']);
+    // ✅ gyroZ vem do FlightData
+    final gyroZ = flightData.gyroZ;
 
-    // 6️⃣ ATUALIZAR ESTADO
+    // ✅ ATUALIZAR ESTADO (type-safe, via Repository)
     state = TelemetryData(
       velocidade: velocidade,
       altitude: altitude,
@@ -136,14 +123,14 @@ class TelemetryNotifier extends StateNotifier<TelemetryData> {
       pitch: pitch,
       roll: roll,
       vario: vario,
-      temperatura: smoothData['temperatura']!,
-      pressao: smoothData['pressao']!,
-      lat: smoothData['lat']!,
-      lng: smoothData['lng']!,
+      temperatura: flightData.temperatura,
+      pressao: flightData.pressao,
+      lat: flightData.lat,
+      lng: flightData.lng,
       gyroZ: gyroZ,
-      accelX: accelX,
-      accelY: accelY,
-      timestamp: DateTime.now(),
+      accelX: flightData.accelX,
+      accelY: flightData.accelY,
+      timestamp: flightData.timestamp,
     );
   }
 
@@ -175,14 +162,6 @@ class TelemetryNotifier extends StateNotifier<TelemetryData> {
 
     // Mantém valor anterior
     return state.vario;
-  }
-
-  /// 🔧 Helper: Converte para double seguro
-  double _toDouble(dynamic value) {
-    if (value == null) return 0.0;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    return double.tryParse(value.toString()) ?? 0.0;
   }
 
   /// 🔄 Reset do variômetro (para recalibração)

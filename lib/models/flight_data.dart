@@ -35,6 +35,9 @@ class FlightData {
   /// GPS longitude in degrees
   final double lng;
 
+  /// Z-axis gyroscope in °/s (turn rate)
+  final double gyroZ;
+
   /// X-axis acceleration in g-force
   final double accelX;
 
@@ -56,6 +59,7 @@ class FlightData {
     required this.pressao,
     required this.lat,
     required this.lng,
+    required this.gyroZ,
     required this.accelX,
     required this.accelY,
     required this.timestamp,
@@ -76,6 +80,7 @@ class FlightData {
       pressao: 0.0,
       lat: 0.0,
       lng: 0.0,
+      gyroZ: 0.0,
       accelX: 0.0,
       accelY: 0.0,
       timestamp: DateTime.now(),
@@ -97,6 +102,7 @@ class FlightData {
   ///   'pressao': 101325.0,
   ///   'lat': -25.4284,
   ///   'lng': -49.2733,
+  ///   'lsm_gz': 0.0,
   ///   'acel_x': 0.1,
   ///   'acel_y': -0.05,
   /// }
@@ -113,6 +119,7 @@ class FlightData {
       pressao: map['pressao'] ?? 0.0,
       lat: map['lat'] ?? 0.0,
       lng: map['lng'] ?? 0.0,
+      gyroZ: map['lsm_gz'] ?? 0.0,
       accelX: map['acel_x'] ?? 0.0,
       accelY: map['acel_y'] ?? 0.0,
       timestamp: DateTime.now(),
@@ -132,6 +139,7 @@ class FlightData {
       'pressao': pressao,
       'lat': lat,
       'lng': lng,
+      'lsm_gz': gyroZ,
       'acel_x': accelX,
       'acel_y': accelY,
     };
@@ -151,6 +159,7 @@ class FlightData {
     double? pressao,
     double? lat,
     double? lng,
+    double? gyroZ,
     double? accelX,
     double? accelY,
     DateTime? timestamp,
@@ -166,6 +175,7 @@ class FlightData {
       pressao: pressao ?? this.pressao,
       lat: lat ?? this.lat,
       lng: lng ?? this.lng,
+      gyroZ: gyroZ ?? this.gyroZ,
       accelX: accelX ?? this.accelX,
       accelY: accelY ?? this.accelY,
       timestamp: timestamp ?? this.timestamp,
@@ -198,6 +208,7 @@ class FlightData {
         other.pressao == pressao &&
         other.lat == lat &&
         other.lng == lng &&
+        other.gyroZ == gyroZ &&
         other.accelX == accelX &&
         other.accelY == accelY;
   }
@@ -215,6 +226,7 @@ class FlightData {
       pressao,
       lat,
       lng,
+      gyroZ,
       accelX,
       accelY,
     );
