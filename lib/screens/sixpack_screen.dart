@@ -1,92 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:async';
-import '../services/websocket/websocket_service.dart';
-import '../services/calibration/calibration_service.dart';
-import '../services/data_processing/smoothing_service.dart';
-import '../widgets/calibration_dialog.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/telemetry_provider.dart';
+import '../providers/flight_stats_provider.dart';
 import '../widgets/artificial_horizon.dart';
 import '../widgets/velocimetro_widget.dart';
 import '../widgets/altimetro_widget.dart';
 import '../widgets/bussola_widget.dart';
 import '../widgets/coordenador_widget.dart';
 import '../widgets/variometro_widget.dart';
-import '../core/utils/logger.dart';
-import 'connection_screen.dart';
 import 'resumo_screen.dart';
 
-class SixPackScreen extends StatefulWidget {
-  final WebSocketService wsService;
-  final CalibrationService? calibrationService;
-
-  const SixPackScreen({
-    super.key,
-    required this.wsService,
-    this.calibrationService,
-  });
+/// 🎯 SixPack Screen - Tela principal de instrumentos
+/// Refatorado com Riverpod - apenas UI, zero lógica de negócio
+class SixPackScreen extends ConsumerStatefulWidget {
+  const SixPackScreen({super.key});
 
   @override
-  State<SixPackScreen> createState() => _SixPackScreenState();
+  ConsumerState<SixPackScreen> createState() => _SixPackScreenState();
 }
 
-class _SixPackScreenState extends State<SixPackScreen> {
-  StreamSubscription? _subscription;
+class _SixPackScreenState extends ConsumerState<SixPackScreen> {
   final PageController _pageController = PageController();
-  late final CalibrationService _calib;
-  final SmoothingService _smooth = SmoothingService();
-  
-  double _rawV = 0, _rawA = 0, _rawH = 0, _rawP = 0, _rawR = 0;
-  // Para cálculo do variômetro (CALCULADO LOCALMENTE com intervalo maior)
-  double _altitudePrevious = 0;
-  int _timePrevious = 0;
-  bool _firstVarioCalc = true;
-  double _varioSmooth = 0;
-  final double _varioAlpha = 0.15; // ✅ Filtro EMA mais suave (era 0.2)
-  final int _varioCalcInterval = 500; // ✅ Calcular apenas a cada 500ms (não a cada 50ms!)
-  
-  double velocidade = 0;
-  double altitude = 0;
-  double heading = 0;
-  double pitch = 0;
-  double roll = 0;
-  double vario = 0;
-  double temperatura = 0;
-  double pressao = 0;
-  double lat = 0;
-  double lng = 0;
-  
-  // Dados para coordenador de curva
-  double gyroZ = 0;
-  double accelX = 0;
-  double accelY = 0;
-  
-  // Offsets de calibração (ajustar quando parado)
-  final double _gyroZOffset = 0;
-  final double _accelXOffset = 0;
-  final double _accelYOffset = 0;
-
-  // Estatísticas do voo
-  DateTime? _inicioVoo;
-  double _velocidadeMax = 0;
-  double _altitudeMax = 0;
-  double _pitchMax = 0;
-  double _pitchMin = 0;
-  double _rollMax = 0;
-  double _rollMin = 0;
-  double _varioMax = 0;
-  double _varioMin = 0;
-  double _temperaturaMax = -999;
-  double _temperaturaMin = 999;
 
   @override
   void initState() {
     super.initState();
-
-    // Usar calibração recebida ou criar nova
-    _calib = widget.calibrationService ?? CalibrationService();
-
-    // Iniciar cronômetro do voo
-    _inicioVoo = DateTime.now();
 
     // Permitir todas as orientações
     SystemChrome.setPreferredOrientations([
@@ -95,290 +34,64 @@ class _SixPackScreenState extends State<SixPackScreen> {
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
-
-    _subscription = widget.wsService.dataStream.listen((data) {
-      if (mounted) {
-        // Log structured flight data
-        Logger.debug(
-          'INSTRUMENTOS → Vel:${data['velocidade']}km/h Alt:${data['altitude']}m '
-          'Hdg:${data['heading']}° Pitch:${data['pitch']}° Roll:${data['roll']}° '
-          'Vario:${data['variometro']}m/s',
-          'SixPack'
-        );
-        
-        Logger.debug(
-          'AMBIENTE → Temp:${data['temperatura']}°C Press:${data['pressao']}Pa '
-          '(${(data['pressao']/100).toStringAsFixed(0)}hPa)',
-          'SixPack'
-        );
-        
-        Logger.debug(
-          'GPS → Lat:${data['lat']} Lng:${data['lng']} '
-          'Sat:${data['satelites']} HDOP:${data['hdop']}',
-          'SixPack'
-        );
-        
-        Logger.debug(
-          'GYROS → L3G[X:${data['gyro_x']} Y:${data['gyro_y']} Z:${data['gyro_z']}] '
-          'LSM[X:${data['lsm_gx']}°/s Y:${data['lsm_gy']}°/s Z:${data['lsm_gz']}°/s]',
-          'SixPack'
-        );
-        
-        Logger.debug(
-          'ACCEL → ADXL[X:${data['acel_x']} Y:${data['acel_y']} Z:${data['acel_z']}] '
-          'LSM[X:${data['lsm_ax']}g Y:${data['lsm_ay']}g Z:${data['lsm_az']}g]',
-          'SixPack'
-        );
-        
-        Logger.debug(
-          'COORDENADOR → Roll:${data['roll']}° AccelX:${data['lsm_ax']}g '
-          'AccelY:${data['lsm_ay']}g TaxaGiro:${data['lsm_gz']}°/s',
-          'SixPack'
-        );
-        setState(() {
-          // 1. Converter dados recebidos para formato do smoothing
-          Map<String, double> rawData = {
-            'velocidade': data['velocidade']?.toDouble() ?? 0.0,
-            'altitude': data['altitude']?.toDouble() ?? 0.0,
-            'heading': data['heading']?.toDouble() ?? 0.0,
-            'pitch': data['pitch']?.toDouble() ?? 0.0,
-            'roll': data['roll']?.toDouble() ?? 0.0,
-            'temperatura': data['temperatura']?.toDouble() ?? 0.0,
-            'pressao': data['pressao']?.toDouble() ?? 0.0,
-            'lat': data['lat']?.toDouble() ?? 0.0,
-            'lng': data['lng']?.toDouble() ?? 0.0,
-          };
-          
-          // 2. Aplicar suavização (EMA + Dead Zone)
-          Map<String, double> smoothData = _smooth.smoothData(rawData);
-          
-          // 3. Armazenar valores RAW suavizados (para calibração)
-          _rawV = smoothData['velocidade']!;
-          _rawA = smoothData['altitude']!;
-          _rawH = smoothData['heading']!;
-          _rawP = smoothData['pitch']!;
-          _rawR = smoothData['roll']!;
-          
-          // 4. Aplicar calibração nos valores suavizados
-          velocidade = _rawV;
-          altitude = _calib.applyCalibratedAltitude(_rawA);
-          heading = _calib.applyCalibratedHeading(_rawH);
-          pitch = _calib.applyCalibratedPitch(_rawP);
-          roll = _calib.applyCalibratedRoll(_rawR);
-          
-          // 5. CALCULAR VARIÔMETRO (m/s) baseado na altitude calibrada
-          // ✅ APENAS A CADA 500ms para reduzir amplificação de ruído
-          int timeNow = DateTime.now().millisecondsSinceEpoch;
-          
-          if (_firstVarioCalc) {
-            _altitudePrevious = altitude;
-            _timePrevious = timeNow;
-            _varioSmooth = 0;
-            _firstVarioCalc = false;
-            vario = 0;
-          } else {
-            // ✅ SÓ CALCULAR se passou intervalo mínimo
-            int deltaTime = timeNow - _timePrevious;
-            
-            if (deltaTime >= _varioCalcInterval) {
-              double deltaAltitude = altitude - _altitudePrevious;
-              double varioInstant = (deltaAltitude * 1000.0) / deltaTime; // m/s
-              _varioSmooth = _varioAlpha * varioInstant + (1 - _varioAlpha) * _varioSmooth;
-              vario = _varioSmooth;
-              
-              _altitudePrevious = altitude;
-              _timePrevious = timeNow;
-            }
-            // Senão, mantém vario atual (não recalcula)
-          }
-          
-          // 6. Dados extras (já suavizados)
-          temperatura = smoothData['temperatura']!;
-          pressao = smoothData['pressao']!;
-          lat = smoothData['lat']!;
-          lng = smoothData['lng']!;
-          
-          // 7. Dados do coordenador de curva
-          double rawGyroZ = data['lsm_gz']?.toDouble() ?? 0.0;
-          double rawAccelX = data['lsm_ax']?.toDouble() ?? 0.0;
-          double rawAccelY = data['lsm_ay']?.toDouble() ?? 0.0;
-          
-          // Aplicar offsets de calibração
-          gyroZ = rawGyroZ - _gyroZOffset;
-          accelX = rawAccelX - _accelXOffset;
-          accelY = rawAccelY - _accelYOffset;
-
-          // 8. Atualizar estatísticas do voo
-          if (velocidade > _velocidadeMax) _velocidadeMax = velocidade;
-          if (altitude > _altitudeMax) _altitudeMax = altitude;
-          if (pitch > _pitchMax) _pitchMax = pitch;
-          if (pitch < _pitchMin) _pitchMin = pitch;
-          if (roll > _rollMax) _rollMax = roll;
-          if (roll < _rollMin) _rollMin = roll;
-          if (vario > _varioMax) _varioMax = vario;
-          if (vario < _varioMin) _varioMin = vario;
-          if (temperatura > _temperaturaMax) _temperaturaMax = temperatura;
-          if (temperatura < _temperaturaMin) _temperaturaMin = temperatura;
-        });
-      }
-    });
   }
 
   @override
   void dispose() {
-    _subscription?.cancel();
     _pageController.dispose();
     
+    // Restaurar apenas portrait
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
     ]);
-    super.dispose();
-  }
-
-  void _openCalibrationDialog() {
-    if (_rawH == 0 && _rawP == 0 && _rawA == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('⚠️ Aguarde dados chegarem!'), 
-          duration: Duration(seconds: 2)
-        ),
-      );
-      return;
-    }
-    showDialog(
-      context: context,
-      builder: (context) => CalibrationDialog(
-        calibrationService: _calib,
-        currentHeading: _rawH,
-        currentPitch: _rawP,
-        currentRoll: _rawR,
-        currentAltitude: _rawA,
-      ),
-    );
-  }
-
-  void _finalizarVoo() {
-    widget.wsService.disconnect();
     
-    final duracao = _inicioVoo != null 
-        ? DateTime.now().difference(_inicioVoo!) 
-        : Duration.zero;
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ResumoScreen(
-          duracao: duracao,
-          velocidadeMax: _velocidadeMax,
-          altitudeMax: _altitudeMax,
-          pitchMax: _pitchMax,
-          pitchMin: _pitchMin,
-          rollMax: _rollMax,
-          rollMin: _rollMin,
-          varioMax: _varioMax,
-          varioMin: _varioMin,
-          temperaturaMax: _temperaturaMax,
-          temperaturaMin: _temperaturaMin,
-        ),
-      ),
-    );
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // 📡 Observar telemetria processada
+    final telemetry = ref.watch(telemetryProvider);
+    
+    // 📊 Observar estatísticas
+    final stats = ref.watch(flightStatsProvider);
+
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
+      body: SafeArea(
+        child: PageView(
+          controller: _pageController,
+          children: [
+            _buildSixPackPage(telemetry),
+            _buildTelemetryPage(telemetry),
+          ],
+        ),
+      ),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // PageView com 2 páginas
-          PageView(
-            controller: _pageController,
-            children: [
-              _buildSixPackPage(),
-              _buildTelemetryPage(),
-            ],
+          // 📊 Botão Resumo
+          FloatingActionButton(
+            heroTag: 'resumo',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ResumoScreen(stats: stats),
+                ),
+              );
+            },
+            backgroundColor: Colors.blue,
+            child: const Icon(Icons.summarize),
           ),
-
-          // Botões
-          Positioned(
-            top: 16,
-            right: 16,
-            child: Row(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _openCalibrationDialog,
-                  icon: const Icon(Icons.tune, size: 16),
-                  label: const Text('Calibrar'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: _finalizarVoo,
-                  icon: const Icon(Icons.flag, size: 16),
-                  label: const Text('Finalizar'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade700,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    widget.wsService.disconnect();
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ConnectionScreen(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.close, size: 16),
-                  label: const Text('Desconectar'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.shade800,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Indicador de página
-          Positioned(
-            bottom: 4,
-            left: 0,
-            right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.5),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.5),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ],
-            ),
+          const SizedBox(height: 8),
+          
+          // 🔙 Botão Voltar
+          FloatingActionButton(
+            heroTag: 'back',
+            onPressed: () => Navigator.pop(context),
+            backgroundColor: Colors.red,
+            child: const Icon(Icons.close),
           ),
         ],
       ),
@@ -388,13 +101,13 @@ class _SixPackScreenState extends State<SixPackScreen> {
   // ========================================
   // PÁGINA 1: SIX-PACK
   // ========================================
-  Widget _buildSixPackPage() {
+  Widget _buildSixPackPage(telemetry) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isLandscape = constraints.maxWidth > constraints.maxHeight;
 
         if (isLandscape) {
-          // LANDSCAPE: 2 linhas x 3 colunas (layout original)
+          // LANDSCAPE: 2 linhas x 3 colunas
           return Column(
             children: [
               // Linha superior
@@ -403,19 +116,22 @@ class _SixPackScreenState extends State<SixPackScreen> {
                   children: [
                     Expanded(
                       child: RepaintBoundary(
-                        child: VelocimetroWidget(velocidade: velocidade),
+                        child: VelocimetroWidget(velocidade: telemetry.velocidade),
                       ),
                     ),
                     Expanded(
                       child: RepaintBoundary(
-                        child: ArtificialHorizon(pitch: pitch, roll: roll),
+                        child: ArtificialHorizon(
+                          pitch: telemetry.pitch,
+                          roll: telemetry.roll,
+                        ),
                       ),
                     ),
                     Expanded(
                       child: RepaintBoundary(
                         child: AltimetroWidget(
-                          altitude: altitude,
-                          pressao: pressao, // ✨ NOVO
+                          altitude: telemetry.altitude,
+                          pressao: telemetry.pressao,
                         ),
                       ),
                     ),
@@ -429,21 +145,21 @@ class _SixPackScreenState extends State<SixPackScreen> {
                     Expanded(
                       child: RepaintBoundary(
                         child: CoordenadorWidget(
-                          roll: roll,
-                          turnRate: gyroZ,
-                          accelX: accelX,
-                          accelY: accelY,
+                          roll: telemetry.roll,
+                          turnRate: telemetry.gyroZ,
+                          accelX: telemetry.accelX,
+                          accelY: telemetry.accelY,
                         ),
                       ),
                     ),
                     Expanded(
                       child: RepaintBoundary(
-                        child: BussolaWidget(heading: heading),
+                        child: BussolaWidget(heading: telemetry.heading),
                       ),
                     ),
                     Expanded(
                       child: RepaintBoundary(
-                        child: VariometroWidget(vario: vario),
+                        child: VariometroWidget(vario: telemetry.vario),
                       ),
                     ),
                   ],
@@ -461,12 +177,15 @@ class _SixPackScreenState extends State<SixPackScreen> {
                   children: [
                     Expanded(
                       child: RepaintBoundary(
-                        child: VelocimetroWidget(velocidade: velocidade),
+                        child: VelocimetroWidget(velocidade: telemetry.velocidade),
                       ),
                     ),
                     Expanded(
                       child: RepaintBoundary(
-                        child: ArtificialHorizon(pitch: pitch, roll: roll),
+                        child: ArtificialHorizon(
+                          pitch: telemetry.pitch,
+                          roll: telemetry.roll,
+                        ),
                       ),
                     ),
                   ],
@@ -479,14 +198,14 @@ class _SixPackScreenState extends State<SixPackScreen> {
                     Expanded(
                       child: RepaintBoundary(
                         child: AltimetroWidget(
-                          altitude: altitude,
-                          pressao: pressao, // ✨ NOVO
+                          altitude: telemetry.altitude,
+                          pressao: telemetry.pressao,
                         ),
                       ),
                     ),
                     Expanded(
                       child: RepaintBoundary(
-                        child: BussolaWidget(heading: heading),
+                        child: BussolaWidget(heading: telemetry.heading),
                       ),
                     ),
                   ],
@@ -499,16 +218,16 @@ class _SixPackScreenState extends State<SixPackScreen> {
                     Expanded(
                       child: RepaintBoundary(
                         child: CoordenadorWidget(
-                          roll: roll,
-                          turnRate: gyroZ,
-                          accelX: accelX,
-                          accelY: accelY,
+                          roll: telemetry.roll,
+                          turnRate: telemetry.gyroZ,
+                          accelX: telemetry.accelX,
+                          accelY: telemetry.accelY,
                         ),
                       ),
                     ),
                     Expanded(
                       child: RepaintBoundary(
-                        child: VariometroWidget(vario: vario),
+                        child: VariometroWidget(vario: telemetry.vario),
                       ),
                     ),
                   ],
@@ -524,7 +243,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
   // ========================================
   // PÁGINA 2: TELEMETRIA EXTRA
   // ========================================
-  Widget _buildTelemetryPage() {
+  Widget _buildTelemetryPage(telemetry) {
     return Column(
       children: [
         // Mapa - TODA a tela horizontal
@@ -559,11 +278,11 @@ class _SixPackScreenState extends State<SixPackScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Lat: ${lat.toStringAsFixed(9)}',
+                        'Lat: ${telemetry.lat.toStringAsFixed(9)}',
                         style: const TextStyle(color: Colors.white, fontSize: 16),
                       ),
                       Text(
-                        'Lng: ${lng.toStringAsFixed(9)}',
+                        'Lng: ${telemetry.lng.toStringAsFixed(9)}',
                         style: const TextStyle(color: Colors.white, fontSize: 16),
                       ),
                     ],
@@ -595,7 +314,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${temperatura.toStringAsFixed(1)}°C',
+                        '${telemetry.temperatura.toStringAsFixed(1)}°C',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
@@ -623,7 +342,7 @@ class _SixPackScreenState extends State<SixPackScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${(pressao / 100).toStringAsFixed(0)} hPa',
+                        '${(telemetry.pressao / 100).toStringAsFixed(0)} hPa',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,

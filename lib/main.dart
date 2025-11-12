@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/constants/app_constants.dart';
-// import 'screens/login_screen.dart'; // ⏸️ Desabilitado temporariamente
-import 'screens/telemetry_test_screen.dart'; // 🧪 STEP 3 TEST
+import 'screens/connection_screen.dart';
 
 void main() {
   runApp(
-    // 🎯 RIVERPOD: Wrapper necessário para providers funcionarem
     const ProviderScope(
       child: MyApp(),
     ),
@@ -24,12 +22,12 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        brightness: Brightness.light,
+        brightness: Brightness.dark,
         useMaterial3: true,
       ),
-      // 🧪 STEP 3: Tela de teste Telemetry Provider
-      home: const TelemetryTestScreen(),
-      // 📝 TODO STEP 5: Fluxo direto ConnectionScreen → CalibrationDialog → SixPackScreen
+      // 🎯 FLUXO DE PRODUÇÃO
+      // ConnectionScreen → SixPackScreen → ResumoScreen
+      home: const ConnectionScreen(),
     );
   }
 }
