@@ -1,5 +1,5 @@
 name: qfly_avionica
-description: Sistema de telemetria para instrução de voo
+description: Sistema de telemetria de voo para instrução aeronáutica
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -10,24 +10,33 @@ dependencies:
   flutter:
     sdk: flutter
   
-  # 🎯 State Management
-  flutter_riverpod: ^2.5.1
-  riverpod_annotation: ^2.3.5
-  
-  # 🔌 Network & WebSocket
-  web_socket_channel: ^2.4.0
-  
-  # 📱 UI & Utils
+  # 🎨 UI/UX
   cupertino_icons: ^1.0.6
+  
+  # 🔄 State Management
+  flutter_riverpod: ^2.4.9
+  
+  # 🌐 Network
+  web_socket_channel: ^2.4.0
+  http: ^1.1.2
+  
+  # 📊 Data
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
   
-  # 🔧 Code Generation (para Riverpod)
-  build_runner: ^2.4.8
-  riverpod_generator: ^2.3.11
+  # 🧪 Testing
+  mockito: ^5.4.4              # 👈 Criar mocks automáticos
+  build_runner: ^2.4.7         # 👈 Gerar código de mocks
+  test: ^1.24.9                # 👈 Framework de testes
+  
+  # 📈 Coverage
+  coverage: ^1.7.2             # 👈 Medir cobertura de testes
+  
+  # 🎯 Lint
+  very_good_analysis: ^5.1.0   # 👈 Regras de código rigorosas
 
 flutter:
   uses-material-design: true
