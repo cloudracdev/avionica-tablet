@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/websocket_provider.dart';
-import 'sixpack_screen.dart';
+import 'calibration_screen.dart';
 
-/// 🔌 Connection Screen - Tela de conexão com ESP32
+/// 📌 Connection Screen - Tela de conexão com ESP32
 class ConnectionScreen extends ConsumerStatefulWidget {
   const ConnectionScreen({super.key});
 
@@ -62,11 +62,11 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
       await Future.delayed(const Duration(seconds: 1));
 
       if (mounted) {
-        // Navegar para SixPackScreen
+        // Navegar para CalibrationScreen
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => const SixPackScreen(),
+            builder: (context) => const CalibrationScreen(),
           ),
         );
       }
@@ -172,7 +172,7 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
                         ),
                       )
                     : const Text(
-                        '🔌 CONECTAR',
+                        '📌 CONECTAR',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

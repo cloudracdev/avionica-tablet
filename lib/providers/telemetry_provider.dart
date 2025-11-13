@@ -2,9 +2,15 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/telemetry_data.dart';
 import '../models/flight_data.dart';
+import '../services/calibration/calibration_service.dart';
 import '../data/repositories/telemetry_repository.dart';
 import '../data/repositories/websocket_telemetry_repository.dart';
 import 'websocket_provider.dart';
+
+/// 🎯 PROVIDER: Serviço de calibração (singleton)
+final calibrationServiceProvider = Provider<CalibrationService>((ref) {
+  return CalibrationService();
+});
 
 /// 🎯 PROVIDER: Repository de telemetria (singleton)
 final telemetryRepositoryProvider = Provider<TelemetryRepository>((ref) {
@@ -22,7 +28,10 @@ final telemetryRepositoryProvider = Provider<TelemetryRepository>((ref) {
 /// 🎯 PROVIDER: Telemetria processada (StateNotifier)
 final telemetryProvider = StateNotifierProvider<TelemetryNotifier, TelemetryData>((ref) {
   final repository = ref.watch(telemetryRepositoryProvider);
-  return TelemetryNotifier(repository);
+  return TelemetryNotifier(
+    repository,
+    ref.watch(calibrationServiceProvider),
+  );
 });
 
 /// 🎯 PROVIDER: Frequência de atualização (Hz)
@@ -35,6 +44,7 @@ final telemetryHzProvider = Provider<int>((ref) {
 /// 📡 NOTIFIER: Processa dados do Repository
 class TelemetryNotifier extends StateNotifier<TelemetryData> {
   final TelemetryRepository _repository;
+  final CalibrationService _calibration;
   StreamSubscription<FlightData>? _subscription;
 
   // 📊 Medidor de frequência (Hz)
@@ -42,7 +52,8 @@ class TelemetryNotifier extends StateNotifier<TelemetryData> {
   int _lastSecond = 0;
   int _currentHz = 0;
 
-  TelemetryNotifier(this._repository) : super(TelemetryData.initial()) {
+  TelemetryNotifier(this._repository, this._calibration)
+      : super(TelemetryData.initial()) {
     _listenToRepository();
   }
 
@@ -73,12 +84,12 @@ class TelemetryNotifier extends StateNotifier<TelemetryData> {
     }
     _frameCount++;
 
-    // ✅ Usar dados diretos do FlightData (calibração desabilitada para teste)
+    // ✅ CALIBRAÇÃO APLICADA
     final velocidade = flightData.velocidade;
-    final altitude = flightData.altitude;
-    final heading = flightData.heading;
-    final pitch = flightData.pitch;
-    final roll = flightData.roll;
+    final altitude = _calibration.applyCalibratedAltitude(flightData.altitude);
+    final heading = _calibration.applyCalibratedHeading(flightData.heading);
+    final pitch = _calibration.applyCalibratedPitch(flightData.pitch);
+    final roll = _calibration.applyCalibratedRoll(flightData.roll);
     
     // ✅ Variômetro desabilitado para teste (sempre 0)
     final vario = 0.0;
