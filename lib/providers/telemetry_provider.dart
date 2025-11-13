@@ -2,15 +2,9 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/telemetry_data.dart';
 import '../models/flight_data.dart';
-import '../services/calibration/calibration_service.dart';
 import '../data/repositories/telemetry_repository.dart';
 import '../data/repositories/websocket_telemetry_repository.dart';
 import 'websocket_provider.dart';
-
-/// 🎯 PROVIDER: Serviço de calibração (singleton)
-final calibrationServiceProvider = Provider<CalibrationService>((ref) {
-  return CalibrationService();
-});
 
 /// 🎯 PROVIDER: Repository de telemetria (singleton)
 final telemetryRepositoryProvider = Provider<TelemetryRepository>((ref) {
@@ -28,11 +22,7 @@ final telemetryRepositoryProvider = Provider<TelemetryRepository>((ref) {
 /// 🎯 PROVIDER: Telemetria processada (StateNotifier)
 final telemetryProvider = StateNotifierProvider<TelemetryNotifier, TelemetryData>((ref) {
   final repository = ref.watch(telemetryRepositoryProvider);
-  
-  return TelemetryNotifier(
-    repository,
-    ref.watch(calibrationServiceProvider),
-  );
+  return TelemetryNotifier(repository);
 });
 
 /// 🎯 PROVIDER: Frequência de atualização (Hz)
@@ -45,24 +35,14 @@ final telemetryHzProvider = Provider<int>((ref) {
 /// 📡 NOTIFIER: Processa dados do Repository
 class TelemetryNotifier extends StateNotifier<TelemetryData> {
   final TelemetryRepository _repository;
-  final CalibrationService _calibration;
   StreamSubscription<FlightData>? _subscription;
-
-  // 📊 Controle do variômetro
-  double _altitudePrevious = 0;
-  int _timePrevious = 0;
-  bool _firstVarioCalc = true;
-  double _varioSmooth = 0;
-  final double _varioAlpha = 0.15;
-  final int _varioCalcInterval = 500; // ms
 
   // 📊 Medidor de frequência (Hz)
   int _frameCount = 0;
   int _lastSecond = 0;
   int _currentHz = 0;
 
-  TelemetryNotifier(this._repository, this._calibration)
-      : super(TelemetryData.initial()) {
+  TelemetryNotifier(this._repository) : super(TelemetryData.initial()) {
     _listenToRepository();
   }
 
@@ -93,24 +73,15 @@ class TelemetryNotifier extends StateNotifier<TelemetryData> {
     }
     _frameCount++;
 
-    // 🔥 TESTE: CALIBRAÇÃO DESABILITADA (usar dados diretos)
+    // ✅ Usar dados diretos do FlightData (calibração desabilitada para teste)
     final velocidade = flightData.velocidade;
     final altitude = flightData.altitude;
     final heading = flightData.heading;
     final pitch = flightData.pitch;
     final roll = flightData.roll;
     
-    // ORIGINAL (comentado para teste):
-    // final altitude = _calibration.applyCalibratedAltitude(flightData.altitude);
-    // final heading = _calibration.applyCalibratedHeading(flightData.heading);
-    // final pitch = _calibration.applyCalibratedPitch(flightData.pitch);
-    // final roll = _calibration.applyCalibratedRoll(flightData.roll);
-
-    // 🔥 TESTE: VARIÔMETRO DESABILITADO (sempre 0)
+    // ✅ Variômetro desabilitado para teste (sempre 0)
     final vario = 0.0;
-    
-    // ORIGINAL (comentado para teste):
-    // final vario = _calculateVario(altitude);
 
     // ✅ gyroZ vem do FlightData
     final gyroZ = flightData.gyroZ;
@@ -132,41 +103,5 @@ class TelemetryNotifier extends StateNotifier<TelemetryData> {
       accelY: flightData.accelY,
       timestamp: flightData.timestamp,
     );
-  }
-
-  /// 📊 Calcula variômetro (apenas a cada 500ms)
-  double _calculateVario(double altitude) {
-    final timeNow = DateTime.now().millisecondsSinceEpoch;
-
-    if (_firstVarioCalc) {
-      _altitudePrevious = altitude;
-      _timePrevious = timeNow;
-      _varioSmooth = 0;
-      _firstVarioCalc = false;
-      return 0;
-    }
-
-    final deltaTime = timeNow - _timePrevious;
-
-    // ✅ SÓ CALCULAR se passou intervalo mínimo
-    if (deltaTime >= _varioCalcInterval) {
-      final deltaAltitude = altitude - _altitudePrevious;
-      final varioInstant = (deltaAltitude * 1000.0) / deltaTime; // m/s
-      _varioSmooth = _varioAlpha * varioInstant + (1 - _varioAlpha) * _varioSmooth;
-
-      _altitudePrevious = altitude;
-      _timePrevious = timeNow;
-
-      return _varioSmooth;
-    }
-
-    // Mantém valor anterior
-    return state.vario;
-  }
-
-  /// 🔄 Reset do variômetro (para recalibração)
-  void resetVario() {
-    _firstVarioCalc = true;
-    _varioSmooth = 0;
   }
 }

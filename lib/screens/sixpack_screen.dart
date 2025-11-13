@@ -12,6 +12,7 @@ import '../widgets/variometro_widget.dart';
 /// 🎯 SixPack Screen - Tela principal de instrumentos
 /// 
 /// Apenas UI - lógica delegada ao SixPackController
+/// DI via Riverpod: Controller acessa dependencies via ref
 class SixPackScreen extends ConsumerStatefulWidget {
   const SixPackScreen({super.key});
 
@@ -21,16 +22,19 @@ class SixPackScreen extends ConsumerStatefulWidget {
 
 class _SixPackScreenState extends ConsumerState<SixPackScreen> {
   final PageController _pageController = PageController();
+  late final SixPackController _controller;
 
   @override
   void initState() {
     super.initState();
+    
+    // ✅ DI: Controller criado com ref (acessa providers)
+    _controller = SixPackController(ref, context);
 
-    // Inicializar controller após primeiro build
+    // Inicializar após primeiro build
     Future.microtask(() {
-      final controller = SixPackController(ref, context);
-      controller.initializeWatchdog();
-      controller.setupOrientations();
+      _controller.initializeWatchdog();
+      _controller.setupOrientations();
     });
   }
 
@@ -44,9 +48,6 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen> {
   Widget build(BuildContext context) {
     // 📡 Observar telemetria processada
     final telemetry = ref.watch(telemetryProvider);
-    
-    // Criar controller com ref/context atualizados para este build
-    final controller = SixPackController(ref, context);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -65,7 +66,7 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen> {
           // 🔄 Botão Reconectar
           FloatingActionButton(
             heroTag: 'reconnect',
-            onPressed: controller.reconnect,
+            onPressed: _controller.reconnect,
             backgroundColor: Colors.blue,
             child: const Icon(Icons.refresh),
           ),
@@ -74,7 +75,7 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen> {
           // ❌ Botão Desconectar
           FloatingActionButton(
             heroTag: 'disconnect',
-            onPressed: controller.disconnect,
+            onPressed: _controller.disconnect,
             backgroundColor: Colors.red,
             child: const Icon(Icons.close),
           ),
