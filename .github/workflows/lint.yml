@@ -1,0 +1,32 @@
+name: Lint
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🎯 Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.0'
+        channel: 'stable'
+        cache: true
+    
+    - name: 📦 Install dependencies
+      run: flutter pub get
+    
+    - name: 🔍 Run analyzer
+      run: flutter analyze --fatal-warnings
+    
+    - name: 🎨 Check formatting
+      run: |
+        flutter format --set-exit-if-changed --dry-run .

@@ -1,0 +1,55 @@
+name: Flutter CI
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: ☕ Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+    
+    - name: 🎯 Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.0'
+        channel: 'stable'
+        cache: true
+    
+    - name: 📦 Install dependencies
+      run: flutter pub get
+    
+    - name: 🔍 Analyze code
+      run: flutter analyze
+    
+    - name: 🧪 Run tests
+      run: flutter test --coverage
+    
+    - name: 📊 Check coverage threshold
+      run: |
+        total=$(grep -oP 'LH:\K\d+' coverage/lcov.info | awk '{s+=$1} END {print s}')
+        lines=$(grep -oP 'LF:\K\d+' coverage/lcov.info | awk '{s+=$1} END {print s}')
+        coverage=$((total * 100 / lines))
+        echo "Coverage: $coverage%"
+        if [ $coverage -lt 20 ]; then
+          echo "❌ Coverage $coverage% is below 20%"
+          exit 1
+        fi
+        echo "✅ Coverage $coverage% meets threshold"
+    
+    - name: 📈 Upload coverage
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage/lcov.info
+        fail_ci_if_error: false
