@@ -11,7 +11,6 @@ void main() {
   );
 }
 
-/// QFLY Flight Instruction System main application.
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -25,8 +24,6 @@ class MyApp extends StatelessWidget {
         brightness: Brightness.dark,
         useMaterial3: true,
       ),
-      // 🎯 FLUXO DE PRODUÇÃO
-      // ConnectionScreen → SixPackScreen → ResumoScreen
       home: const ConnectionScreen(),
     );
   }
