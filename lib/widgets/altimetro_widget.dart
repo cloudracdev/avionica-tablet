@@ -8,7 +8,7 @@ import '../painters/altimetro_painter.dart';
 /// Includes Kollsman window showing current QNH setting.
 /// Tap to adjust QNH (barometric pressure setting).
 class AltimetroWidget extends StatefulWidget {
-  /// Raw altitude in meters from sensor
+  /// CALIBRATED altitude in meters (already has offset applied)
   final double altitude;
 
   /// Barometric pressure in Pascals
@@ -30,17 +30,11 @@ class _AltimetroWidgetState extends State<AltimetroWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // Convert QNH from inHg to Pa (1 inHg = 3386.39 Pa)
-    double qnhPa = _qnhAjustado * 3386.39;
-
-    // Barometric formula for altitude calculation:
-    // h = 44330 × (1 - (P/P0)^0.1903)
-    // Where: h = altitude (m), P = measured pressure (Pa), P0 = QNH reference (Pa)
-    double pressaoPa = widget.pressao;
-    double altitudeAjustada = 44330.0 * (1.0 - pow(pressaoPa / qnhPa, 0.1903));
-
+    // ✅ USA ALTITUDE JÁ CALIBRADA (vem com offset aplicado!)
+    double altitudeMetros = widget.altitude;
+    
     // Convert to feet
-    double altitudeFeet = altitudeAjustada * 3.28084;
+    double altitudeFeet = altitudeMetros * 3.28084;
 
     return GestureDetector(
       onTap: () => _mostrarAjusteKollsman(context),
@@ -79,7 +73,7 @@ class _AltimetroWidgetState extends State<AltimetroWidget> {
                     child: CustomPaint(
                       painter: AltimetroPainter(
                         altitudeFeet: altitudeFeet,
-                        altitudeMeters: altitudeAjustada,
+                        altitudeMeters: altitudeMetros,
                         qnhInHg: _qnhAjustado,
                       ),
                     ),
@@ -93,7 +87,7 @@ class _AltimetroWidgetState extends State<AltimetroWidget> {
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(
                 '${altitudeFeet.toStringAsFixed(0)} ft | '
-                '${altitudeAjustada.toStringAsFixed(1)} m',
+                '${altitudeMetros.toStringAsFixed(1)} m',
                 style: const TextStyle(
                   color: Colors.grey,
                   fontSize: 10,
