@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/websocket_provider.dart';
 import '../providers/telemetry_provider.dart';
 import '../providers/mock_mode_provider.dart';
+import '../models/telemetry_data.dart';
 import 'calibration_screen.dart';
 
 class ConnectionScreen extends ConsumerStatefulWidget {
@@ -18,6 +20,7 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
     text: '192.168.4.1',
   );
   bool _isConnecting = false;
+  String _connectionStatus = '';
 
   @override
   void initState() {
@@ -37,7 +40,10 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
   }
 
   void _connect() async {
-    setState(() => _isConnecting = true);
+    setState(() {
+      _isConnecting = true;
+      _connectionStatus = '';
+    });
 
     try {
       // RESETAR calibração
@@ -58,13 +64,17 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isConnecting = false);
+        setState(() {
+          _isConnecting = false;
+          _connectionStatus = '';
+        });
       }
     }
   }
 
   Future<void> _connectMock() async {
-    // Pegar repository mock e conectar
+    setState(() => _connectionStatus = '🎭 Iniciando modo mock...');
+    
     final repo = ref.read(telemetryRepositoryProvider);
     await repo.connect('mock');
     
@@ -90,15 +100,40 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
       return;
     }
 
+    // PASSO 1: Conectar WebSocket
+    setState(() => _connectionStatus = '🔌 Conectando ao ESP32...');
+    
     final wsService = ref.read(webSocketServiceProvider);
     wsService.connect(ip);
     
     ref.read(connectionStateProvider.notifier).state = true;
     ref.read(ipAddressProvider.notifier).state = ip;
 
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(milliseconds: 500));
 
+    // PASSO 2: Aguardar dados reais
+    setState(() => _connectionStatus = '📡 Aguardando dados de telemetria...');
+    
+    final dataReceived = await _waitForTelemetryData();
+    
+    if (!dataReceived) {
+      // ROLLBACK: Falhou
+      wsService.disconnect();
+      ref.read(connectionStateProvider.notifier).state = false;
+      
+      if (mounted) {
+        _showConnectionError();
+      }
+      return;
+    }
+
+    // SUCESSO: Navegar
     if (mounted) {
+      final hz = ref.read(telemetryHzProvider);
+      setState(() => _connectionStatus = '✅ Conectado! $hz Hz');
+      
+      await Future.delayed(const Duration(milliseconds: 500));
+      
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -106,6 +141,61 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
         ),
       );
     }
+  }
+
+  Future<bool> _waitForTelemetryData() async {
+    final completer = Completer<bool>();
+    StreamSubscription<TelemetryData>? subscription;
+    Timer? timeoutTimer;
+    
+    // Escuta stream de telemetria
+    subscription = ref.read(telemetryProvider.notifier).stream.listen((data) {
+      // Verifica se é dado válido (não-zero)
+      if (data.timestamp.isAfter(DateTime.now().subtract(const Duration(seconds: 2)))) {
+        if (!completer.isCompleted) {
+          completer.complete(true);
+        }
+      }
+    });
+    
+    // Timeout de 10 segundos
+    timeoutTimer = Timer(const Duration(seconds: 10), () {
+      if (!completer.isCompleted) {
+        completer.complete(false);
+      }
+    });
+    
+    // Aguarda resultado
+    final result = await completer.future;
+    
+    // Cleanup
+    await subscription.cancel();
+    timeoutTimer.cancel();
+    
+    return result;
+  }
+
+  void _showConnectionError() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('❌ Falha na Conexão'),
+        content: const Text(
+          'Não foi possível receber dados do ESP32.\n\n'
+          '💡 Verifique:\n'
+          '• ESP32 está ligado\n'
+          '• Conectado ao WiFi do ESP32\n'
+          '• IP correto (192.168.4.1)\n'
+          '• Firmware atualizado no ESP32'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -190,7 +280,6 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
                             Switch(
                               value: isMockMode,
                               onChanged: (value) {
-                                // ATUALIZAR PROVIDER GLOBAL
                                 ref.read(mockModeProvider.notifier).state = value;
                               },
                               activeColor: Colors.orange,
@@ -255,6 +344,20 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
                               ),
                             ),
                       ),
+                      
+                      // STATUS DE CONEXÃO
+                      if (_connectionStatus.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          _connectionStatus,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.blue,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                       
                       const SizedBox(height: 16),
                       
