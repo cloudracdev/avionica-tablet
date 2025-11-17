@@ -67,7 +67,10 @@ class SixPackController {
     if (shouldDisconnect != true) return;
     
     final wsService = _ref.read(webSocketServiceProvider);
+    final watchdog = _ref.read(connectionWatchdogProvider);
+    
     wsService.disconnect();
+    watchdog.reset(); // ✅ CLEANUP: Para watchdog e reseta estado
     _ref.read(connectionStateProvider.notifier).state = false;
     
     // RESETAR calibration service ao desconectar
