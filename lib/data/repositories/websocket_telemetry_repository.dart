@@ -1,6 +1,7 @@
 import 'dart:async';
 import '../../models/flight_data.dart';
 import '../../services/websocket/websocket_service.dart';
+import '../../core/utils/logger.dart';
 import 'telemetry_repository.dart';
 
 /// 🌐 REPOSITORY: Implementação WebSocket
@@ -16,10 +17,28 @@ class WebSocketTelemetryRepository implements TelemetryRepository {
   @override
   Stream<FlightData> getFlightDataStream() {
     // Converte stream do WebSocket para FlightData
-    _subscription ??= _wsService.dataStream.listen((rawData) {
-      final flightData = _convertToFlightData(rawData);
-      _controller.add(flightData);
-    });
+    _subscription ??= _wsService.dataStream.listen(
+      (rawData) {
+        try {
+          // 🛡️ ERROR BOUNDARY: Conversão com try-catch
+          final flightData = _convertToFlightData(rawData);
+          _controller.add(flightData);
+        } catch (e, stackTrace) {
+          Logger.error(
+            '❌ Erro ao converter FlightData',
+            e,
+            stackTrace,
+            'Repository',
+          );
+          // Não propaga erro, apenas ignora pacote ruim
+        }
+      },
+      onError: (error) {
+        Logger.error('❌ Erro no stream WebSocket', error, null, 'Repository');
+        // Stream continua mesmo com erro
+      },
+      cancelOnError: false, // 🛡️ Não cancela stream em erro
+    );
 
     return _controller.stream;
   }
@@ -47,30 +66,48 @@ class WebSocketTelemetryRepository implements TelemetryRepository {
   }
 
   /// 🔄 Converte Map<String, dynamic> → FlightData
+  /// 🛡️ Com validação de tipos e fallback para zero
   FlightData _convertToFlightData(Map<String, dynamic> data) {
-    return FlightData(
-      velocidade: _toDouble(data['velocidade']),
-      altitude: _toDouble(data['altitude']),
-      heading: _toDouble(data['heading']),
-      pitch: _toDouble(data['pitch']),
-      roll: _toDouble(data['roll']),
-      vario: 0.0, // Será calculado no provider
-      temperatura: _toDouble(data['temperatura']),
-      pressao: _toDouble(data['pressao']),
-      lat: _toDouble(data['lat']),
-      lng: _toDouble(data['lng']),
-      gyroZ: _toDouble(data['lsm_gz']),
-      accelX: _toDouble(data['lsm_ax']),
-      accelY: _toDouble(data['lsm_ay']),
-      timestamp: DateTime.now(),
-    );
+    try {
+      return FlightData(
+        velocidade: _toDouble(data['velocidade']),
+        altitude: _toDouble(data['altitude']),
+        heading: _toDouble(data['heading']),
+        pitch: _toDouble(data['pitch']),
+        roll: _toDouble(data['roll']),
+        vario: 0.0, // Será calculado no provider
+        temperatura: _toDouble(data['temperatura']),
+        pressao: _toDouble(data['pressao']),
+        lat: _toDouble(data['lat']),
+        lng: _toDouble(data['lng']),
+        gyroZ: _toDouble(data['lsm_gz']),
+        accelX: _toDouble(data['lsm_ax']),
+        accelY: _toDouble(data['lsm_ay']),
+        timestamp: DateTime.now(),
+      );
+    } catch (e) {
+      Logger.warning('⚠️ Erro na conversão, usando FlightData.zero()', 'Repository');
+      // 🛡️ Fallback: retorna dados zerados em vez de crashar
+      return FlightData.zero();
+    }
   }
 
   /// 🔧 Helper: Converte para double seguro
+  /// 🛡️ Retorna 0.0 se conversão falhar
   double _toDouble(dynamic value) {
-    if (value == null) return 0.0;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    return double.tryParse(value.toString()) ?? 0.0;
+    try {
+      if (value == null) return 0.0;
+      if (value is double) return value;
+      if (value is int) return value.toDouble();
+      if (value is String) {
+        final parsed = double.tryParse(value);
+        if (parsed != null && parsed.isFinite) {
+          return parsed;
+        }
+      }
+      return 0.0;
+    } catch (e) {
+      return 0.0;
+    }
   }
 }
