@@ -1,6 +1,7 @@
 import 'dart:async';
 import '../../models/flight_data.dart';
 import '../../services/websocket/websocket_service.dart';
+import '../../services/validation/gps_validator_service.dart';
 import '../../core/utils/logger.dart';
 import 'telemetry_repository.dart';
 
@@ -11,6 +12,11 @@ class WebSocketTelemetryRepository implements TelemetryRepository {
   final WebSocketService _wsService;
   StreamSubscription<Map<String, dynamic>>? _subscription;
   final _controller = StreamController<FlightData>.broadcast();
+
+  // 🛡️ Última posição GPS válida para fallback
+  double _lastValidLat = 0.0;
+  double _lastValidLng = 0.0;
+  bool _hasValidGpsHistory = false;
 
   WebSocketTelemetryRepository(this._wsService);
 
@@ -53,6 +59,10 @@ class WebSocketTelemetryRepository implements TelemetryRepository {
   @override
   void disconnect() {
     _wsService.disconnect();
+    // Reset GPS history on disconnect
+    _hasValidGpsHistory = false;
+    _lastValidLat = 0.0;
+    _lastValidLng = 0.0;
   }
 
   @override
@@ -66,9 +76,34 @@ class WebSocketTelemetryRepository implements TelemetryRepository {
   }
 
   /// 🔄 Converte Map<String, dynamic> → FlightData
-  /// 🛡️ Com validação de tipos e fallback para zero
+  /// 🛡️ Com validação GPS e fallback para última posição válida
   FlightData _convertToFlightData(Map<String, dynamic> data) {
     try {
+      final lat = _toDouble(data['lat']);
+      final lng = _toDouble(data['lng']);
+
+      // 🌍 VALIDAÇÃO GPS: Verifica se coordenadas são válidas
+      final isGpsValid = GpsValidatorService.isValidGPS(lat, lng);
+
+      // 🛡️ FALLBACK: Se GPS inválido, usar última posição válida
+      double finalLat = lat;
+      double finalLng = lng;
+      
+      if (!isGpsValid && _hasValidGpsHistory) {
+        finalLat = _lastValidLat;
+        finalLng = _lastValidLng;
+        Logger.warning(
+          '⚠️ GPS inválido, usando última posição válida: '
+          '($finalLat, $finalLng)',
+          'Repository',
+        );
+      } else if (isGpsValid) {
+        // Salvar coordenadas válidas para fallback futuro
+        _lastValidLat = lat;
+        _lastValidLng = lng;
+        _hasValidGpsHistory = true;
+      }
+
       return FlightData(
         velocidade: _toDouble(data['velocidade']),
         altitude: _toDouble(data['altitude']),
@@ -78,12 +113,13 @@ class WebSocketTelemetryRepository implements TelemetryRepository {
         vario: 0.0, // Será calculado no provider
         temperatura: _toDouble(data['temperatura']),
         pressao: _toDouble(data['pressao']),
-        lat: _toDouble(data['lat']),
-        lng: _toDouble(data['lng']),
+        lat: finalLat,
+        lng: finalLng,
         gyroZ: _toDouble(data['lsm_gz']),
         accelX: _toDouble(data['lsm_ax']),
         accelY: _toDouble(data['lsm_ay']),
         timestamp: DateTime.now(),
+        gpsValid: isGpsValid,
       );
     } catch (e) {
       Logger.warning('⚠️ Erro na conversão, usando FlightData.zero()', 'Repository');

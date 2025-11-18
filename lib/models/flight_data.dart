@@ -3,7 +3,7 @@
 /// This model contains all sensor readings from the ESP32 and serves as
 /// the single source of truth for flight data throughout the application.
 ///
-/// Replaces the old Map&lt;String, double&gt; approach with type-safe properties.
+/// Replaces the old Map<String, double> approach with type-safe properties.
 class FlightData {
   /// Airspeed in km/h
   final double velocidade;
@@ -47,6 +47,12 @@ class FlightData {
   /// Timestamp when this data was captured
   final DateTime timestamp;
 
+  /// GPS validity flag (true = valid signal, false = invalid/no signal)
+  /// 
+  /// GPS is considered invalid if coordinates have less than 7 decimal places
+  /// precision (e.g., 0.0, 0.0 or 0.0000001, 0.0000001)
+  final bool gpsValid;
+
   /// Creates a new FlightData instance.
   const FlightData({
     required this.velocidade,
@@ -63,6 +69,7 @@ class FlightData {
     required this.accelX,
     required this.accelY,
     required this.timestamp,
+    this.gpsValid = true, // Default: assume GPS is valid
   });
 
   /// Creates FlightData with all values set to zero.
@@ -84,6 +91,7 @@ class FlightData {
       accelX: 0.0,
       accelY: 0.0,
       timestamp: DateTime.now(),
+      gpsValid: false, // Zero data = invalid GPS
     );
   }
 
@@ -123,6 +131,7 @@ class FlightData {
       accelX: map['acel_x'] ?? 0.0,
       accelY: map['acel_y'] ?? 0.0,
       timestamp: DateTime.now(),
+      gpsValid: true, // Will be validated in repository
     );
   }
 
@@ -163,6 +172,7 @@ class FlightData {
     double? accelX,
     double? accelY,
     DateTime? timestamp,
+    bool? gpsValid,
   }) {
     return FlightData(
       velocidade: velocidade ?? this.velocidade,
@@ -179,6 +189,7 @@ class FlightData {
       accelX: accelX ?? this.accelX,
       accelY: accelY ?? this.accelY,
       timestamp: timestamp ?? this.timestamp,
+      gpsValid: gpsValid ?? this.gpsValid,
     );
   }
 
@@ -190,7 +201,8 @@ class FlightData {
         'heading: ${heading.toStringAsFixed(0)}°, '
         'pitch: ${pitch.toStringAsFixed(1)}°, '
         'roll: ${roll.toStringAsFixed(1)}°, '
-        'vario: ${vario.toStringAsFixed(2)} m/s'
+        'vario: ${vario.toStringAsFixed(2)} m/s, '
+        'gpsValid: $gpsValid'
         ')';
   }
 
@@ -210,7 +222,8 @@ class FlightData {
         other.lng == lng &&
         other.gyroZ == gyroZ &&
         other.accelX == accelX &&
-        other.accelY == accelY;
+        other.accelY == accelY &&
+        other.gpsValid == gpsValid;
   }
 
   @override
@@ -229,6 +242,7 @@ class FlightData {
       gyroZ,
       accelX,
       accelY,
+      gpsValid,
     );
   }
 }

@@ -8,6 +8,7 @@ import '../widgets/altimetro_widget.dart';
 import '../widgets/bussola_widget.dart';
 import '../widgets/coordenador_widget.dart';
 import '../widgets/variometro_widget.dart';
+import '../widgets/connection_status_widget.dart';
 
 /// 🎯 SixPack Screen - Tela principal de instrumentos
 /// 
@@ -52,11 +53,23 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: PageView(
-          controller: _pageController,
+        child: Stack(
           children: [
-            _buildSixPackPage(telemetry),
-            _buildTelemetryPage(telemetry),
+            // Conteúdo principal (instrumentos)
+            PageView(
+              controller: _pageController,
+              children: [
+                _buildSixPackPage(telemetry),
+                _buildTelemetryPage(telemetry),
+              ],
+            ),
+            
+            // 📡 INDICADOR DE STATUS (overlay no topo)
+            const Positioned(
+              top: 0,
+              left: 0,
+              child: ConnectionStatusWidget(),
+            ),
           ],
         ),
       ),

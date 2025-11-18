@@ -26,6 +26,11 @@ class TelemetryData {
   // ⏱️ Timestamp
   final DateTime timestamp;
 
+  // 🌍 GPS validity flag
+  /// GPS is valid if coordinates have 7+ decimal places precision
+  /// false = GPS sem sinal ou precisão insuficiente
+  final bool gpsValid;
+
   const TelemetryData({
     required this.velocidade,
     required this.altitude,
@@ -41,6 +46,7 @@ class TelemetryData {
     required this.accelX,
     required this.accelY,
     required this.timestamp,
+    this.gpsValid = true,
   });
 
   /// 🏭 Factory: Cria estado inicial (zeros)
@@ -60,6 +66,7 @@ class TelemetryData {
       accelX: 0,
       accelY: 0,
       timestamp: DateTime.now(),
+      gpsValid: false, // Initial state = no GPS
     );
   }
 
@@ -79,6 +86,7 @@ class TelemetryData {
     double? accelX,
     double? accelY,
     DateTime? timestamp,
+    bool? gpsValid,
   }) {
     return TelemetryData(
       velocidade: velocidade ?? this.velocidade,
@@ -95,6 +103,7 @@ class TelemetryData {
       accelX: accelX ?? this.accelX,
       accelY: accelY ?? this.accelY,
       timestamp: timestamp ?? this.timestamp,
+      gpsValid: gpsValid ?? this.gpsValid,
     );
   }
 }
