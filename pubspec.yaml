@@ -22,6 +22,8 @@ dependencies:
   
   # 📊 Data
   shared_preferences: ^2.2.2
+  sqflite: ^2.4.2
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:
@@ -37,6 +39,7 @@ dev_dependencies:
   
   # 🎯 Lint
   very_good_analysis: ^5.1.0   # 👈 Regras de código rigorosas
+  sqflite_common_ffi: ^2.3.5
 
 flutter:
   uses-material-design: true

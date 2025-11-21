@@ -38,22 +38,22 @@ Buffer distribuído estrategicamente:
 ### 📅 SEMANA 1 (17-23 NOV 2025)
 **Sprint 1.1 - Refatoração Mobile Base**
 
-- [ ] 🏛️ **Arquitetura Limpa**
-  - [ ] Separar `sixpack_screen` (643 → <200 linhas)
-  - [ ] Migrar `Map` → `FlightData` type-safe
-  - [ ] Provider/Riverpod setup
-  - [ ] Repository pattern (WebSocket/Local)
+- [X] 🏛️ **Arquitetura Limpa**
+  - [X] Separar `sixpack_screen` (643 → <200 linhas)
+  - [X] Migrar `Map` → `FlightData` type-safe
+  - [X] Provider/Riverpod setup
+  - [X] Repository pattern (WebSocket/Local)
 
-- [ ] 🧪 **Infraestrutura Testes**
-  - [ ] Test runner + coverage setup
-  - [ ] Mocks WebSocket/Sensores
-  - [ ] Testes `SmoothingService`
-  - [ ] Widget tests 2 instrumentos
+- [-] 🧪 **Infraestrutura Testes**
+  - [X] Test runner + coverage setup
+  - [X] Mocks WebSocket/Sensores
+  - [X] Testes `SmoothingService`
+  - [-] Widget tests 2 instrumentos
 
-- [ ] ⚙️ **CI/CD**
-  - [ ] GitHub Actions pipeline
-  - [ ] Lint + analyze
-  - [ ] Coverage reports
+- [X] ⚙️ **CI/CD**
+  - [X] GitHub Actions pipeline
+  - [X] Lint + analyze
+  - [X] Coverage reports
 
 **Meta:** Arquitetura limpa 70% + Testes 20% cobertura
 
@@ -62,19 +62,19 @@ Buffer distribuído estrategicamente:
 ### 📅 SEMANA 2 (24-30 NOV 2025)
 **Sprint 1.2 - Refatoração Conclusão**
 
-- [ ] 🏛️ **Arquitetura Completa**
-  - [ ] Injeção dependência
-  - [ ] Finalizar refactor `sixpack_screen`
-  - [ ] Code review interno
+- [X] 🏛️ **Arquitetura Completa**
+  - [X] Injeção dependência
+  - [X] Finalizar refactor `sixpack_screen`
+  - [X] Code review interno
 
-- [ ] 🧪 **Testes Cobertura**
-  - [ ] Testes `CalibrationService`
-  - [ ] Widget tests 2 instrumentos restantes
-  - [ ] Cobertura 20% → 40%
+- [-] 🧪 **Testes Cobertura**
+  - [X] Testes `CalibrationService`
+  - [-] Widget tests 2 instrumentos restantes
+  - [X] Cobertura 20% → 40%
 
-- [ ] 📊 **Métricas**
-  - [ ] Warnings: 28 → <15
-  - [ ] Arquitetura score: 4/10 → 6/10
+- [X] 📊 **Métricas**
+  - [X] Warnings: 28 → <15
+  - [X] Arquitetura score: 4/10 → 6/10
 
 **Meta:** Cobertura 40% + Warnings <15
 
@@ -83,21 +83,21 @@ Buffer distribuído estrategicamente:
 ### 📅 SEMANA 3 (01-07 DEZ 2025)
 **Sprint 2.1 - Estabilidade Mobile**
 
-- [ ] 🔌 **WebSocket Resiliente**
-  - [ ] Reconnect exponential backoff
-  - [ ] Error boundaries globais
-  - [ ] Validação ranges sensores
-  - [ ] Fallback último valor válido
+- [x] 🔌 **WebSocket Resiliente**
+  - [X] Reconnect exponential backoff
+  - [X] Error boundaries globais
+  - [X] Validação ranges sensores
+  - [X] Fallback último valor válido
 
-- [ ] 📱 **WiFi Loss Handling**
-  - [ ] Tratamento perda conexão WiFi
-  - [ ] Queue offline sync (WiFi apenas)
-  - [ ] UI indicadores status conexão
+- [X] 📱 **WiFi Loss Handling**
+  - [X] Tratamento perda conexão WiFi
 
-- [ ] 🧪 **Testes Integração**
-  - [ ] Testes reconnect
-  - [ ] Testes offline mode
-  - [ ] Widget tests 4 instrumentos
+  - [x] UI indicadores status conexão
+
+- [-] 🧪 **Testes Integração**
+  - [X] Testes reconnect
+  
+  - [-] Widget tests 4 instrumentos
 
 **Meta:** WebSocket 100% resiliente + Offline básico
 
@@ -109,7 +109,7 @@ Buffer distribuído estrategicamente:
 - [ ] 💾 **SQLite Setup**
   - [ ] 1 DB por voo
   - [ ] FlightSession CRUD
-  - [ ] Migrations schema
+  - [X] Migrations schema
 
 - [ ] ⚡ **Hive Cache**
   - [ ] Cache configurações
@@ -122,6 +122,8 @@ Buffer distribuído estrategicamente:
 - [ ] 🧪 **Testes Persistência**
   - [ ] Integration tests offline
   - [ ] Cobertura 40% → 60%
+
+  - [ ] Testes offline mode
 
 **Meta:** Offline-first 100% + Cobertura 60% ✅  
 **KPI:** Arquitetura 7/10 | Warnings <10
