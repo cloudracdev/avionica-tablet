@@ -106,14 +106,14 @@ Buffer distribuído estrategicamente:
 ### 📅 SEMANA 4 (08-14 DEZ 2025)
 **Sprint 2.2 - Persistência Local**
 
-- [ ] 💾 **SQLite Setup**
-  - [ ] 1 DB por voo
-  - [ ] FlightSession CRUD
+- [X] 💾 **SQLite Setup**
+  - [X] 1 DB por voo
+  - [X] FlightSession CRUD
   - [X] Migrations schema
 
-- [ ] ⚡ **Hive Cache**
-  - [ ] Cache configurações
-  - [ ] Cache último voo
+- [X] ⚡ **Hive Cache**
+  - [X] Cache configurações
+  - [X] Cache último voo
 
 - [ ] 🔒 **Offline-First Completo**
   - [ ] Sync queue (WiFi apenas)

@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/constants/app_constants.dart';
 import 'screens/connection_screen.dart';
+import 'services/cache/hive_cache_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await HiveCacheService.init();
+  
   runApp(
     const ProviderScope(
       child: MyApp(),
