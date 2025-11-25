@@ -37,7 +37,7 @@ void main() {
     });
 
     // ==========================================================================
-    // NOVOS TESTES - EMA ALGORITHM (ALPHA RESPONSIVO)
+    // NOVOS TESTES - EMA ALGORITHM (ALPHAS REAIS)
     // ==========================================================================
 
     test('primeira leitura deve retornar valor bruto (sem suavização)', () {
@@ -47,127 +47,114 @@ void main() {
         'heading': 180.0,
       });
       
-      // Primeira leitura = valor bruto
       expect(result['velocidade'], equals(150.0));
       expect(result['altitude'], equals(1500.0));
       expect(result['heading'], equals(180.0));
     });
 
-    test('segunda leitura deve aplicar EMA - velocidade (alpha=0.8)', () {
-      // t0: 100 km/h
+    test('segunda leitura deve aplicar EMA - velocidade (alpha=0.4)', () {
       service.smoothData({'velocidade': 100.0});
-      
-      // t1: 200 km/h
       final result = service.smoothData({'velocidade': 200.0});
       
-      // EMA: 0.8 * 200 + 0.2 * 100 = 160 + 20 = 180
-      expect(result['velocidade'], closeTo(180.0, 0.1));
+      // EMA: 0.4 * 200 + 0.6 * 100 = 80 + 60 = 140
+      expect(result['velocidade'], closeTo(140.0, 0.1));
     });
 
-    test('segunda leitura deve aplicar EMA - altitude (alpha=0.7)', () {
-      // t0: 1000m
+    test('segunda leitura deve aplicar EMA - altitude (alpha=0.3)', () {
       service.smoothData({'altitude': 1000.0});
-      
-      // t1: 2000m
       final result = service.smoothData({'altitude': 2000.0});
       
-      // EMA: 0.7 * 2000 + 0.3 * 1000 = 1400 + 300 = 1700
-      expect(result['altitude'], closeTo(1700.0, 0.1));
+      // EMA: 0.3 * 2000 + 0.7 * 1000 = 600 + 700 = 1300
+      expect(result['altitude'], closeTo(1300.0, 0.1));
     });
 
     test('terceira leitura deve continuar suavizando progressivamente', () {
-      service.smoothData({'velocidade': 100.0}); // t0: 100
-      service.smoothData({'velocidade': 200.0}); // t1: 180
-      final result = service.smoothData({'velocidade': 100.0}); // t2: ?
+      service.smoothData({'velocidade': 100.0});
+      service.smoothData({'velocidade': 200.0}); // t1: 140
+      final result = service.smoothData({'velocidade': 100.0});
       
-      // t2 = 0.8 * 100 + 0.2 * 180 = 80 + 36 = 116
-      expect(result['velocidade'], closeTo(116.0, 0.5));
+      // t2 = 0.4 * 100 + 0.6 * 140 = 40 + 84 = 124
+      expect(result['velocidade'], closeTo(124.0, 0.5));
     });
 
     // ==========================================================================
-    // DEAD ZONE TESTS (VALORES AJUSTADOS)
+    // DEAD ZONE TESTS (VALORES REAIS: 0.5)
     // ==========================================================================
 
     test('dead zone deve ignorar mudanças pequenas - altitude', () {
       service.smoothData({'altitude': 1000.0});
       
-      // Mudança de 0.15m (< 0.2m dead zone)
-      final result = service.smoothData({'altitude': 1000.15});
+      // Mudança de 0.3m (< 0.5m dead zone)
+      final result = service.smoothData({'altitude': 1000.3});
       
-      // Deve manter valor anterior
       expect(result['altitude'], equals(1000.0));
     });
 
     test('dead zone deve aceitar mudanças grandes - altitude', () {
       service.smoothData({'altitude': 1000.0});
       
-      // Mudança de 10m (> 0.2m dead zone)
+      // Mudança de 10m (> 0.5m dead zone)
       final result = service.smoothData({'altitude': 1010.0});
       
-      // Deve aplicar EMA: 0.7 * 1010 + 0.3 * 1000 = 1007
-      expect(result['altitude'], closeTo(1007.0, 0.1));
+      // EMA: 0.3 * 1010 + 0.7 * 1000 = 303 + 700 = 1003
+      expect(result['altitude'], closeTo(1003.0, 0.1));
     });
 
     test('dead zone deve ignorar mudanças pequenas - velocidade', () {
       service.smoothData({'velocidade': 120.0});
       
-      // Mudança de 0.15 km/h (< 0.2 km/h dead zone)
-      final result = service.smoothData({'velocidade': 120.15});
+      // Mudança de 0.3 km/h (< 0.5 km/h dead zone)
+      final result = service.smoothData({'velocidade': 120.3});
       
-      // Deve manter valor anterior
       expect(result['velocidade'], equals(120.0));
     });
 
     test('dead zone deve aceitar mudanças grandes - velocidade', () {
       service.smoothData({'velocidade': 120.0});
       
-      // Mudança de 20 km/h (> 0.2 km/h dead zone)
+      // Mudança de 20 km/h (> 0.5 km/h dead zone)
       final result = service.smoothData({'velocidade': 140.0});
       
-      // Deve aplicar EMA: 0.8 * 140 + 0.2 * 120 = 112 + 24 = 136
-      expect(result['velocidade'], closeTo(136.0, 0.1));
+      // EMA: 0.4 * 140 + 0.6 * 120 = 56 + 72 = 128
+      expect(result['velocidade'], closeTo(128.0, 0.1));
     });
 
     // ==========================================================================
-    // CIRCULAR SMOOTHING (HEADING - ALPHA=0.9)
+    // CIRCULAR SMOOTHING (HEADING - ALPHA=0.5)
     // ==========================================================================
 
     test('heading circular - mudança normal 90° → 120°', () {
       service.smoothData({'heading': 90.0});
-      
       final result = service.smoothData({'heading': 120.0});
       
-      // EMA: 0.9 * 120 + 0.1 * 90 = 108 + 9 = 117
-      expect(result['heading'], closeTo(117.0, 0.5));
+      // EMA circular: 90 + 0.5 * 30 = 105
+      expect(result['heading'], closeTo(105.0, 0.5));
     });
 
     test('heading circular - wrap around 350° → 10°', () {
       service.smoothData({'heading': 350.0});
-      
       final result = service.smoothData({'heading': 10.0});
       
-      // Diferença circular: 10 - 350 = -340, mas deve ser +20
-      // EMA circular: 350 + 0.9 * 20 = 368 → normaliza para 8
-      expect(result['heading'], closeTo(8.0, 1.0));
+      // Diferença circular: +20°
+      // EMA: 350 + 0.5 * 20 = 360 → normaliza para 0
+      expect(result['heading'], closeTo(0.0, 1.0));
     });
 
     test('heading circular - wrap around 10° → 350°', () {
       service.smoothData({'heading': 10.0});
-      
       final result = service.smoothData({'heading': 350.0});
       
-      // Diferença circular: 350 - 10 = 340, mas deve ser -20
-      // EMA circular: 10 + 0.9 * (-20) = -8 → normaliza para 352
-      expect(result['heading'], closeTo(352.0, 1.0));
+      // Diferença circular: -20°
+      // EMA: 10 + 0.5 * (-20) = 0
+      expect(result['heading'], closeTo(0.0, 1.0));
     });
 
-    test('heading dead zone - ignora mudanças < 0.5°', () {
+    test('heading dead zone - ignora mudanças < 1.0°', () {
       service.smoothData({'heading': 180.0});
       
-      // Mudança de 0.3° (< 0.5° dead zone)
-      final result = service.smoothData({'heading': 180.3});
+      // Mudança de 0.5° (< 1.0° dead zone)
+      final result = service.smoothData({'heading': 180.5});
       
-      // Deve manter valor anterior
       expect(result['heading'], equals(180.0));
     });
 
@@ -192,12 +179,12 @@ void main() {
         'roll': 3.0,
       });
       
-      // Cada campo usa seu próprio alpha
-      expect(result['velocidade'], closeTo(180.0, 0.1)); // alpha=0.8
-      expect(result['altitude'], closeTo(1700.0, 0.1));  // alpha=0.7
-      expect(result['heading'], closeTo(171.0, 1.0));    // alpha=0.9 circular
-      expect(result['pitch'], closeTo(9.5, 0.1));        // alpha=0.9
-      expect(result['roll'], closeTo(2.4, 0.1));         // alpha=0.9
+      // Cada campo usa seu próprio alpha REAL
+      expect(result['velocidade'], closeTo(140.0, 0.1)); // alpha=0.4
+      expect(result['altitude'], closeTo(1300.0, 0.1));  // alpha=0.3
+      expect(result['heading'], closeTo(135.0, 1.0));    // alpha=0.5 circular
+      expect(result['pitch'], closeTo(8.0, 0.1));        // alpha=0.6
+      expect(result['roll'], closeTo(0.6, 0.1));         // alpha=0.6
     });
 
     test('campos ausentes devem manter valor anterior', () {
@@ -211,8 +198,9 @@ void main() {
         // altitude ausente
       });
       
-      expect(result['velocidade'], closeTo(144.0, 0.5)); // Atualizado
-      expect(result['altitude'], equals(1500.0));        // Mantido
+      // EMA: 0.4 * 150 + 0.6 * 120 = 60 + 72 = 132
+      expect(result['velocidade'], closeTo(132.0, 0.5));
+      expect(result['altitude'], equals(1500.0));
     });
 
     // ==========================================================================
@@ -228,7 +216,6 @@ void main() {
       
       final result = service.smoothData({'altitude': 5000.0});
       
-      // Após reset, primeira leitura = valor bruto
       expect(result['altitude'], equals(5000.0));
     });
 
@@ -238,11 +225,11 @@ void main() {
       
       service.reset();
       
-      service.smoothData({'velocidade': 50.0}); // Nova primeira
-      final result = service.smoothData({'velocidade': 150.0}); // Nova segunda
+      service.smoothData({'velocidade': 50.0});
+      final result = service.smoothData({'velocidade': 150.0});
       
-      // EMA: 0.8 * 150 + 0.2 * 50 = 120 + 10 = 130
-      expect(result['velocidade'], closeTo(130.0, 0.1));
+      // EMA: 0.4 * 150 + 0.6 * 50 = 60 + 30 = 90
+      expect(result['velocidade'], closeTo(90.0, 0.1));
     });
 
     // ==========================================================================
@@ -251,37 +238,32 @@ void main() {
 
     test('valores zero devem ser processados normalmente', () {
       service.smoothData({'velocidade': 100.0});
-      
       final result = service.smoothData({'velocidade': 0.0});
       
-      // EMA: 0.8 * 0 + 0.2 * 100 = 20
-      expect(result['velocidade'], closeTo(20.0, 0.1));
+      // EMA: 0.4 * 0 + 0.6 * 100 = 60
+      expect(result['velocidade'], closeTo(60.0, 0.1));
     });
 
     test('valores negativos devem ser processados (pitch/roll)', () {
       service.smoothData({'pitch': 5.0});
-      
       final result = service.smoothData({'pitch': -5.0});
       
-      // EMA: 0.9 * (-5) + 0.1 * 5 = -4.5 + 0.5 = -4.0
-      expect(result['pitch'], closeTo(-4.0, 0.1));
+      // EMA: 0.6 * (-5) + 0.4 * 5 = -3 + 2 = -1
+      expect(result['pitch'], closeTo(-1.0, 0.1));
     });
 
     test('heading em 0° deve ser tratado corretamente', () {
       service.smoothData({'heading': 0.0});
-      
       final result = service.smoothData({'heading': 10.0});
       
-      // EMA circular: 0 + 0.9 * 10 = 9
-      expect(result['heading'], closeTo(9.0, 0.5));
+      // EMA circular: 0 + 0.5 * 10 = 5
+      expect(result['heading'], closeTo(5.0, 0.5));
     });
 
     test('heading em 360° deve normalizar para 0°', () {
       service.smoothData({'heading': 360.0});
-      
       final result = service.smoothData({'heading': 370.0});
       
-      // 360 e 370 normalizam para 0 e 10
       expect(result['heading'], greaterThanOrEqualTo(0.0));
       expect(result['heading'], lessThan(360.0));
     });

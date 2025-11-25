@@ -115,15 +115,15 @@ Buffer distribuído estrategicamente:
   - [X] Cache configurações
   - [X] Cache último voo
 
-- [ ] 🔒 **Offline-First Completo**
-  - [ ] Sync queue (WiFi apenas)
-  - [ ] Conflict resolution básico
+- [X] 🔒 **Offline-First Completo**
+  - [X] Sync queue (WiFi apenas)
+  - [X] Conflict resolution básico
 
-- [ ] 🧪 **Testes Persistência**
-  - [ ] Integration tests offline
-  - [ ] Cobertura 40% → 60%
+- [X] 🧪 **Testes Persistência**
+  - [X] Integration tests offline
+  - [X] Cobertura 40% → 60%
 
-  - [ ] Testes offline mode
+  - [X] Testes offline mode
 
 **Meta:** Offline-first 100% + Cobertura 60% ✅  
 **KPI:** Arquitetura 7/10 | Warnings <10
@@ -205,6 +205,11 @@ Buffer distribuído estrategicamente:
 
 ### 📅 SEMANA 8 (05-11 JAN 2026)
 **Sprint 4.1 - Sync + Live Tracking**
+
+- [ ] 🎬 **Gravação Telemetria** ← NOVO
+  - [ ] Integrar WebSocket → SQLite
+  - [ ] Criar FlightSession ao iniciar voo
+  - [ ] Finalizar FlightSession ao encerrar
 
 - [ ] 🔄 **Sync WiFi Automático**
   - [ ] Sync voos pendentes (WiFi apenas)
