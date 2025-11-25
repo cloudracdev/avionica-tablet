@@ -133,11 +133,11 @@ Buffer distribuído estrategicamente:
 ### 📅 SEMANA 5 (15-21 DEZ 2025)
 **Sprint 3.1 - Backend Infraestrutura**
 
-- [ ] 🛠️ **Supabase Setup**
-  - [ ] Auth JWT
-  - [ ] PostgreSQL schema completo
-  - [ ] Redis cache
-  - [ ] S3/Storage fotos
+- [X] 🛠️ **Supabase Setup**
+  - [X] Auth JWT
+  - [X] PostgreSQL schema completo
+  - [-] Redis cache
+  - [X] S3/Storage fotos
 
 - [ ] 🌐 **API REST Base**
   - [ ] Endpoints CRUD usuários
