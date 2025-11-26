@@ -139,15 +139,16 @@ Buffer distribuído estrategicamente:
   - [-] Redis cache
   - [X] S3/Storage fotos
 
-- [ ] 🌐 **API REST Base**
-  - [ ] Endpoints CRUD usuários
-  - [ ] Endpoints voos
-  - [ ] Auth middleware
+- [X] 🌐 **API REST Base**
+  - [X] Endpoints CRUD usuários
+  - [X] Endpoints voos
+  - [X] Auth middleware
 
-- [ ] 🔧 **N8N Workflows Início**
-  - [ ] Docker compose N8N (servidor próprio)
-  - [ ] Workflow 1: Sync voo mobile → cloud (WiFi)
-  - [ ] Workflow 2: CIV ANAC sandbox
+- [X] 🔧 **N8N Workflows Início**
+  - [X] Docker compose N8N (servidor próprio)
+  - [X] Workflow 1: Sync voo mobile → cloud (WiFi)
+  - [X] Workflow 4: Hobbs Updater ← NOVO
+  - [X] Workflow 2: CIV Generator (HTML interno)
 
 **Meta:** Backend rodando + 2 workflows funcionais
 
