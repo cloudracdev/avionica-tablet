@@ -164,14 +164,14 @@ Buffer distribuído estrategicamente:
   - [-] Roles (4 perfis) -> Instrutor only (tablet)
 
 - [ ] 🔧 **N8N Completo**
-  - [ ] Workflow 3: Notificações email
-  - [ ] Testar 3 workflows
-  - [ ] Logs estruturados
+  - [-] Workflow 3: Notificações email - POS MVP
+  - [X] Testar 4 workflows
+  - [X] Logs estruturados
 
-- [ ] 🧪 **Testes Auth**
-  - [ ] Auth flow tests
-  - [ ] API tests
-  - [ ] Cobertura 60% → 65%
+- [X] 🧪 **Testes Auth**
+  - [X] Auth flow tests
+  - [X] API tests
+  - [X] Cobertura 60% → 65%
 
 **Meta:** Auth production + 3 workflows N8N ✅
 
