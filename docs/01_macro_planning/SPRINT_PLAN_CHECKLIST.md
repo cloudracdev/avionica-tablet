@@ -157,11 +157,11 @@ Buffer distribuído estrategicamente:
 ### 📅 SEMANA 6 (22-28 DEZ 2025) 🎄
 **Sprint 3.2 - Auth + N8N** ⚠️ **NATAL 25/DEZ**
 
-- [ ] 🔐 **Mobile Auth**
-  - [ ] Login/Signup real
-  - [ ] Protected routes
-  - [ ] Session persistence
-  - [ ] Roles (4 perfis)
+- [X] 🔐 **Mobile Auth**
+  - [X] Login/Signup real
+  - [X] Protected routes
+  - [X] Session persistence
+  - [-] Roles (4 perfis) -> Instrutor only (tablet)
 
 - [ ] 🔧 **N8N Completo**
   - [ ] Workflow 3: Notificações email

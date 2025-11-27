@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'core/constants/app_constants.dart';
-import 'screens/connection_screen.dart';
+import 'core/config/supabase_config.dart';
+import 'core/router/app_router.dart';
 import 'services/cache/hive_cache_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
   await HiveCacheService.init();
+  await SupabaseConfig.initialize();
   
   runApp(
     const ProviderScope(
@@ -15,20 +17,22 @@ void main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: AppConstants.appName,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+
+    return MaterialApp.router(
+      title: 'QFLY Aviônica',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
         brightness: Brightness.dark,
         useMaterial3: true,
       ),
-      home: const ConnectionScreen(),
+      routerConfig: router,
     );
   }
 }

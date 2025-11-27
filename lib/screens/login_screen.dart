@@ -1,36 +1,47 @@
 import 'package:flutter/material.dart';
-import 'selecao_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../providers/auth_provider.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+class LoginScreen extends ConsumerStatefulWidget {
+  const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _nomeController = TextEditingController();
-  final TextEditingController _senhaController = TextEditingController();
-
-  void _entrar() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const SelecaoScreen()),
-    );
-  }
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _senhaController = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _nomeController.dispose();
+    _emailController.dispose();
     _senhaController.dispose();
     super.dispose();
   }
 
+  Future<void> _entrar() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final success = await ref.read(authProvider.notifier).signIn(
+      email: _emailController.text.trim(),
+      password: _senhaController.text,
+    );
+
+    if (success && mounted) {
+      context.go('/connection');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
     final size = MediaQuery.of(context).size;
     final isLandscape = size.width > size.height;
-    
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -46,249 +57,188 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         child: SafeArea(
           child: Center(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: EdgeInsets.symmetric(
                 horizontal: size.width * 0.08,
                 vertical: size.height * 0.05,
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Logo horizontal: ícone + QFLY
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.flight,
-                        size: isLandscape ? size.height * 0.12 : 50,
-                        color: Colors.white,
-                      ),
-                      SizedBox(width: size.width * 0.02),
-                      Text(
-                        'QFLY',
-                        style: TextStyle(
-                          fontSize: isLandscape ? size.height * 0.12 : 36,
-                          fontWeight: FontWeight.bold,
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.flight,
+                          size: isLandscape ? size.height * 0.12 : 50,
                           color: Colors.white,
-                          letterSpacing: 3,
                         ),
-                      ),
-                    ],
-                  ),
-                  
-                  SizedBox(height: size.height * 0.01),
-                  
-                  Text(
-                    'Sistema de Instrução Aeronáutica',
-                    style: TextStyle(
-                      fontSize: isLandscape ? size.height * 0.03 : 12,
-                      color: Colors.white.withOpacity(0.9),
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  
-                  SizedBox(height: size.height * 0.04),
-                  
-                  // Card de login compacto
-                  Container(
-                    constraints: BoxConstraints(
-                      maxWidth: isLandscape ? size.width * 0.5 : size.width * 0.8,
-                    ),
-                    padding: EdgeInsets.all(size.height * 0.03),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 15,
-                          offset: const Offset(0, 8),
+                        SizedBox(width: size.width * 0.02),
+                        Text(
+                          'QFLY',
+                          style: TextStyle(
+                            fontSize: isLandscape ? size.height * 0.12 : 36,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 3,
+                          ),
                         ),
                       ],
                     ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Campos lado a lado
-                        Row(
-                          children: [
-                            // Nome
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.person,
-                                        color: Colors.blue.shade700,
-                                        size: 16,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Instrutor',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.blue.shade900,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  TextField(
-                                    controller: _nomeController,
-                                    style: const TextStyle(fontSize: 14),
-                                    decoration: InputDecoration(
-                                      hintText: 'Nome',
-                                      filled: true,
-                                      fillColor: Colors.grey.shade100,
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 12,
-                                      ),
-                                      isDense: true,
-                                    ),
-                                    textInputAction: TextInputAction.next,
-                                  ),
-                                ],
+                    SizedBox(height: size.height * 0.01),
+                    Text(
+                      'Sistema de Instrução Aeronáutica',
+                      style: TextStyle(
+                        fontSize: isLandscape ? size.height * 0.03 : 12,
+                        color: Colors.white.withOpacity(0.9),
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    SizedBox(height: size.height * 0.04),
+                    Container(
+                      constraints: BoxConstraints(
+                        maxWidth: isLandscape ? size.width * 0.5 : size.width * 0.85,
+                      ),
+                      padding: EdgeInsets.all(size.height * 0.03),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 15,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextFormField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            decoration: InputDecoration(
+                              labelText: 'Email',
+                              prefixIcon: Icon(Icons.email, color: Colors.blue.shade700),
+                              filled: true,
+                              fillColor: Colors.grey.shade100,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
                               ),
                             ),
-                            
-                            SizedBox(width: size.width * 0.02),
-                            
-                            // Senha
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Informe o email';
+                              }
+                              if (!value.contains('@')) {
+                                return 'Email inválido';
+                              }
+                              return null;
+                            },
+                          ),
+                          SizedBox(height: size.height * 0.02),
+                          TextFormField(
+                            controller: _senhaController,
+                            obscureText: _obscurePassword,
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) => _entrar(),
+                            decoration: InputDecoration(
+                              labelText: 'Senha',
+                              prefixIcon: Icon(Icons.lock, color: Colors.blue.shade700),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                                  color: Colors.grey,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                              ),
+                              filled: true,
+                              fillColor: Colors.grey.shade100,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Informe a senha';
+                              }
+                              if (value.length < 6) {
+                                return 'Mínimo 6 caracteres';
+                              }
+                              return null;
+                            },
+                          ),
+                          if (authState.errorMessage != null) ...[
+                            SizedBox(height: size.height * 0.02),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.red.shade200),
+                              ),
+                              child: Row(
                                 children: [
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.lock,
-                                        color: Colors.blue.shade700,
-                                        size: 16,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Senha (opcional)',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.blue.shade900,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  TextField(
-                                    controller: _senhaController,
-                                    obscureText: true,
-                                    style: const TextStyle(fontSize: 14),
-                                    decoration: InputDecoration(
-                                      hintText: '••••••',
-                                      filled: true,
-                                      fillColor: Colors.grey.shade100,
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 12,
-                                      ),
-                                      isDense: true,
+                                  Icon(Icons.error, color: Colors.red.shade700, size: 20),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      authState.errorMessage!,
+                                      style: TextStyle(color: Colors.red.shade700, fontSize: 13),
                                     ),
-                                    textInputAction: TextInputAction.done,
-                                    onSubmitted: (_) => _entrar(),
                                   ),
                                 ],
                               ),
                             ),
                           ],
-                        ),
-                        
-                        SizedBox(height: size.height * 0.02),
-                        
-                        // Botão minimalista centralizado
-                        Center(
-                          child: SizedBox(
-                            width: isLandscape ? size.width * 0.15 : size.width * 0.4,
+                          SizedBox(height: size.height * 0.03),
+                          SizedBox(
+                            height: 48,
                             child: ElevatedButton(
-                              onPressed: _entrar,
+                              onPressed: authState.isLoading ? null : _entrar,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blue.shade700,
                                 foregroundColor: Colors.white,
-                                padding: EdgeInsets.symmetric(
-                                  vertical: size.height * 0.015,
-                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 elevation: 2,
                               ),
-                              child: const Text(
-                                'ENTRAR',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1,
-                                ),
-                              ),
+                              child: authState.isLoading
+                                  ? const SizedBox(
+                                      height: 24,
+                                      width: 24,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'ENTRAR',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
                             ),
                           ),
-                        ),
-                        
-                        SizedBox(height: size.height * 0.015),
-                        
-                        // Nota dev mode compacta
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.shade50,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: Colors.amber.shade200,
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                color: Colors.amber.shade700,
-                                size: 14,
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  'Dev Mode: aceita qualquer nome',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.amber.shade900,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
