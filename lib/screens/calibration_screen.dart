@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/telemetry_provider.dart';
-import 'sixpack_screen.dart';
 
-/// ⚙️ Calibration Screen - Tela de calibração dos instrumentos
 class CalibrationScreen extends ConsumerStatefulWidget {
   const CalibrationScreen({super.key});
 
@@ -27,38 +26,28 @@ class _CalibrationScreenState extends ConsumerState<CalibrationScreen> {
     final calibrationService = ref.read(calibrationServiceProvider);
     final telemetry = ref.read(telemetryProvider);
 
-    // Calibrar bússola se valor foi digitado
     if (_headingController.text.isNotEmpty) {
       double realHeading = double.tryParse(_headingController.text) ?? 0.0;
       calibrationService.calibrateHeading(realHeading, telemetry.heading);
     }
 
-    // Zerar pitch se marcado
     if (_zeroPitch) {
       calibrationService.zeroPitch(telemetry.pitch);
     }
 
-    // Zerar roll se marcado
     if (_zeroRoll) {
       calibrationService.zeroRoll(telemetry.roll);
     }
 
-    // Zerar altitude se marcado
     if (_zeroAltitude) {
       calibrationService.zeroAltitude(telemetry.altitude);
     }
 
-    // Navegar para SixPackScreen
     _navigateToSixPack();
   }
 
   void _navigateToSixPack() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const SixPackScreen(),
-      ),
-    );
+    context.go('/sixpack');
   }
 
   Widget _buildValueRow(String label, String value) {
@@ -86,7 +75,6 @@ class _CalibrationScreenState extends ConsumerState<CalibrationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 📡 Observar telemetria LIVE
     final telemetry = ref.watch(telemetryProvider);
 
     return Scaffold(
@@ -97,7 +85,6 @@ class _CalibrationScreenState extends ConsumerState<CalibrationScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Título
               const Icon(Icons.tune, color: Colors.blue, size: 60),
               const SizedBox(height: 16),
               const Text(
@@ -118,7 +105,6 @@ class _CalibrationScreenState extends ConsumerState<CalibrationScreen> {
 
               const SizedBox(height: 32),
 
-              // Card valores atuais
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -140,14 +126,13 @@ class _CalibrationScreenState extends ConsumerState<CalibrationScreen> {
                     _buildValueRow('🧭 Bússola', '${telemetry.heading.toInt()}°'),
                     _buildValueRow('⬆️ Pitch', '${telemetry.pitch.toStringAsFixed(1)}°'),
                     _buildValueRow('↔️ Roll', '${telemetry.roll.toStringAsFixed(1)}°'),
-                    _buildValueRow('📏 Altitude', '${telemetry.altitude.toStringAsFixed(1)}m'),
+                    _buildValueRow('📍 Altitude', '${telemetry.altitude.toStringAsFixed(1)}m'),
                   ],
                 ),
               ),
 
               const SizedBox(height: 24),
 
-              // Calibrar bússola
               const Text(
                 '🧭 CALIBRAR BÚSSOLA',
                 style: TextStyle(
@@ -178,7 +163,6 @@ class _CalibrationScreenState extends ConsumerState<CalibrationScreen> {
 
               const SizedBox(height: 24),
 
-              // Zerar instrumentos
               const Text(
                 '🔄 ZERAR INSTRUMENTOS',
                 style: TextStyle(
@@ -249,7 +233,6 @@ class _CalibrationScreenState extends ConsumerState<CalibrationScreen> {
 
               const SizedBox(height: 32),
 
-              // Botões de ação
               Row(
                 children: [
                   Expanded(

@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/websocket_provider.dart';
 import '../providers/telemetry_provider.dart';
 import '../providers/connection_watchdog_provider.dart';
-import '../screens/connection_screen.dart';
 
-/// 🎮 CONTROLLER: Lógica de negócio da SixPackScreen
 class SixPackController {
   final WidgetRef _ref;
   final BuildContext _context;
@@ -41,7 +40,6 @@ class SixPackController {
     final ip = _ref.read(ipAddressProvider);
     final watchdog = _ref.read(connectionWatchdogProvider);
     
-    // RESETAR calibration service ao reconectar
     _ref.read(calibrationServiceProvider).resetAll();
     
     wsService.disconnect();
@@ -70,10 +68,9 @@ class SixPackController {
     final watchdog = _ref.read(connectionWatchdogProvider);
     
     wsService.disconnect();
-    watchdog.reset(); // ✅ CLEANUP: Para watchdog e reseta estado
+    watchdog.reset();
     _ref.read(connectionStateProvider.notifier).state = false;
     
-    // RESETAR calibration service ao desconectar
     _ref.read(calibrationServiceProvider).resetAll();
     
     _showSnackBar(
@@ -85,12 +82,7 @@ class SixPackController {
     await Future.delayed(const Duration(milliseconds: 500));
     
     if (_context.mounted) {
-      Navigator.pushReplacement(
-        _context,
-        MaterialPageRoute(
-          builder: (context) => const ConnectionScreen(),
-        ),
-      );
+      _context.go('/connection');
     }
   }
 
@@ -116,16 +108,16 @@ class SixPackController {
   }) {
     return showDialog<bool>(
       context: _context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: Text(title),
         content: Text(content),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Cancelar'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Desconectar'),
           ),
         ],
