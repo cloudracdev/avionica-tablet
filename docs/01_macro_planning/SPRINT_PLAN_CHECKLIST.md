@@ -180,7 +180,7 @@ Buffer distribuído estrategicamente:
 ### 🛡️ SEMANA 7 (29 DEZ 2025 - 04 JAN 2026) - BUFFER 1 🎉
 **Buffer Pós-Refatoração** ⚠️ **ANO NOVO 01/JAN**
 
-- [X] 🔧 **Dívida Técnica**
+- [ ] 🔧 **Dívida Técnica**
   - [X] Fix warnings restantes
   - [ ] Code review completo
   - [X] Refactor ajustes finais
@@ -191,8 +191,8 @@ Buffer distribuído estrategicamente:
   - [ ] Setup dev guide
 
 - [ ] 🧪 **Testes Reforço**
-  - [ ] Cobertura gaps
-  - [ ] Edge cases
+  - [X] Cobertura gaps
+  - [X] Edge cases
   - [ ] Performance profiling
 
 - [ ] 🎯 **Planning Sprint 4-6**
