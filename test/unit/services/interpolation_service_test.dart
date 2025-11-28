@@ -110,7 +110,7 @@ void main() {
       test('should become stale after timeout', () async {
         service.setTarget(_createTelemetry());
         expect(service.isStale, false);
-        await Future.delayed(const Duration(milliseconds: 1100));
+        await Future.delayed(const Duration(milliseconds: 3100));
         expect(service.isStale, true);
       });
     });

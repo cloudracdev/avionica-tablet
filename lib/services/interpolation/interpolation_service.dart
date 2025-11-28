@@ -70,10 +70,23 @@ class InterpolationService {
 
   TelemetryData getInterpolated() {
     final now = DateTime.now();
-    final deltaTime = now.difference(_lastUpdateTime).inMilliseconds / 1000.0;
+    double deltaTime = now.difference(_lastUpdateTime).inMilliseconds / 1000.0;
     _lastUpdateTime = now;
 
     if (!_initialized) return TelemetryData.initial();
+
+    // 🛡️ FIX 1: Clamp deltaTime para evitar explosão após background
+    // Max 100ms (0.1s) - se maior, provavelmente voltou do background
+    if (deltaTime > InterpolationConstants.maxDeltaTimeSeconds) {
+      // Reset velocidades spring para evitar aceleração absurda
+      _velocityPitch = 0;
+      _velocityRoll = 0;
+      _velocityVario = 0;
+      _velocityGyroZ = 0;
+      _velocityAccelX = 0;
+      _velocityAccelY = 0;
+      deltaTime = InterpolationConstants.maxDeltaTimeSeconds;
+    }
 
     final timeSinceLastTarget = now.difference(_lastTargetTime).inMilliseconds;
     if (timeSinceLastTarget > InterpolationConstants.maxInterpolationTimeMs) {
@@ -83,6 +96,9 @@ class InterpolationService {
     _interpolateLinear(deltaTime);
     _interpolateSpring(deltaTime);
     _interpolateCircular(deltaTime);
+
+    // 🛡️ FIX 2: Clamp valores para ranges físicos válidos
+    _clampAllValues();
 
     return _buildTelemetryData();
   }
@@ -221,6 +237,51 @@ class InterpolationService {
       _heading,
       _targetHeading,
       InterpolationConstants.lerpSpeedHeading,
+    );
+  }
+
+  /// 🛡️ Clamp all values to physically valid ranges
+  void _clampAllValues() {
+    _velocidade = _velocidade.clamp(
+      InterpolationConstants.minVelocidade,
+      InterpolationConstants.maxVelocidade,
+    );
+    _altitude = _altitude.clamp(
+      InterpolationConstants.minAltitude,
+      InterpolationConstants.maxAltitude,
+    );
+    _heading = _normalizeAngle(_heading);
+    _pitch = _pitch.clamp(
+      InterpolationConstants.minPitch,
+      InterpolationConstants.maxPitch,
+    );
+    _roll = _roll.clamp(
+      InterpolationConstants.minRoll,
+      InterpolationConstants.maxRoll,
+    );
+    _vario = _vario.clamp(
+      InterpolationConstants.minVario,
+      InterpolationConstants.maxVario,
+    );
+    _temperatura = _temperatura.clamp(
+      InterpolationConstants.minTemperatura,
+      InterpolationConstants.maxTemperatura,
+    );
+    _pressao = _pressao.clamp(
+      InterpolationConstants.minPressao,
+      InterpolationConstants.maxPressao,
+    );
+    _gyroZ = _gyroZ.clamp(
+      InterpolationConstants.minGyroZ,
+      InterpolationConstants.maxGyroZ,
+    );
+    _accelX = _accelX.clamp(
+      InterpolationConstants.minAccel,
+      InterpolationConstants.maxAccel,
+    );
+    _accelY = _accelY.clamp(
+      InterpolationConstants.minAccel,
+      InterpolationConstants.maxAccel,
     );
   }
 
