@@ -185,10 +185,10 @@ Buffer distribuído estrategicamente:
   - [X] Code review completo
   - [X] Refactor ajustes finais
 
-- [ ] 📝 **Documentação**
+- [X] 📝 **Documentação**
   - [X] Docs arquitetura
   - [X] Docs API backend
-  - [ ] Setup dev guide
+  - [X] Setup dev guide
 
 - [ ] 🧪 **Testes Reforço**
   - [X] Cobertura gaps
