@@ -180,13 +180,13 @@ Buffer distribuído estrategicamente:
 ### 🛡️ SEMANA 7 (29 DEZ 2025 - 04 JAN 2026) - BUFFER 1 🎉
 **Buffer Pós-Refatoração** ⚠️ **ANO NOVO 01/JAN**
 
-- [ ] 🔧 **Dívida Técnica**
+- [X] 🔧 **Dívida Técnica**
   - [X] Fix warnings restantes
   - [X] Code review completo
   - [X] Refactor ajustes finais
 
 - [ ] 📝 **Documentação**
-  - [ ] Docs arquitetura
+  - [X] Docs arquitetura
   - [ ] Docs API backend
   - [ ] Setup dev guide
 
