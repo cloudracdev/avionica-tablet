@@ -24,16 +24,25 @@ class AltimetroWidget extends StatefulWidget {
 }
 
 class _AltimetroWidgetState extends State<AltimetroWidget> {
-  /// QNH adjusted by user (default: 29.92 inHg = 1013.25 hPa)
+  /// QNH padrão (Standard pressure)
+  static const double _qnhPadrao = 29.92; // inHg = 1013.25 hPa
+
+  /// QNH adjusted by user (default: 29.92 inHg)
   double _qnhAjustado = 29.92;
 
   @override
   Widget build(BuildContext context) {
-    // ✅ USA ALTITUDE JÁ CALIBRADA (vem com offset aplicado!)
-    double altitudeMetros = widget.altitude;
-    
-    // Convert to feet
-    double altitudeFeet = altitudeMetros * 3.28084;
+    // ✅ ALTITUDE DO SENSOR (calibrada)
+    final double altitudeSensorMetros = widget.altitude;
+    final double altitudeSensorFeet = altitudeSensorMetros * 3.28084;
+
+    // ✅ CORREÇÃO KOLLSMAN: 1 inHg ≈ 1000 ft
+    final double diferencaQnh = _qnhAjustado - _qnhPadrao;
+    final double correcaoFeet = diferencaQnh * 1000;
+
+    // ✅ ALTITUDE CORRIGIDA
+    final double altitudeFeet = altitudeSensorFeet + correcaoFeet;
+    final double altitudeMetros = altitudeFeet / 3.28084;
 
     return GestureDetector(
       onTap: () => _mostrarAjusteKollsman(context),
@@ -145,8 +154,17 @@ class _KollsmanDialogState extends State<_KollsmanDialog> {
     });
   }
 
+  /// Calcula prévia da correção de altitude
+  int _calcularCorrecao() {
+    const double qnhPadrao = 29.92;
+    return ((_qnh - qnhPadrao) * 1000).round();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final correcao = _calcularCorrecao();
+    final correcaoStr = correcao >= 0 ? '+$correcao' : '$correcao';
+
     return Dialog(
       backgroundColor: Colors.grey.shade900,
       shape: RoundedRectangleBorder(
@@ -216,7 +234,30 @@ class _KollsmanDialogState extends State<_KollsmanDialog> {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
+
+            // 🆕 Prévia da correção de altitude
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: correcao == 0
+                    ? Colors.grey.shade800
+                    : (correcao > 0 ? Colors.green.shade900 : Colors.red.shade900),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Correção: $correcaoStr ft',
+                style: TextStyle(
+                  color: correcao == 0
+                      ? Colors.grey
+                      : (correcao > 0 ? Colors.green : Colors.red),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
 
             // Adjustment buttons
             Row(
@@ -267,6 +308,11 @@ class _KollsmanDialogState extends State<_KollsmanDialog> {
                   const SizedBox(height: 4),
                   Text(
                     'Padrão: 29.92 inHg (1013.25 hPa)',
+                    style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '1 inHg ≈ 1000 ft',
                     style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
                   ),
                 ],
