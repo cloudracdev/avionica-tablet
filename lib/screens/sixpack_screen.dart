@@ -15,9 +15,6 @@ import '../widgets/variometro_widget.dart';
 import '../widgets/connection_status_widget.dart';
 
 /// 🎯 SixPack Screen - Tela principal de instrumentos
-/// 
-/// Usa interpolação 60fps para animações suaves dos instrumentos.
-/// Dados brutos chegam a 3-4Hz do ESP32, interpolação preenche os frames.
 class SixPackScreen extends ConsumerStatefulWidget {
   const SixPackScreen({super.key});
 
@@ -29,7 +26,7 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
     with SingleTickerProviderStateMixin {
   final PageController _pageController = PageController();
   late final SixPackController _controller;
-  
+
   // 🎯 Interpolação 60fps
   late final InterpolationService _interpolation;
   Ticker? _ticker;
@@ -39,61 +36,81 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
   @override
   void initState() {
     super.initState();
-    
+
     _controller = SixPackController(ref, context);
     _interpolation = InterpolationService();
 
     Future.microtask(() {
       _controller.initializeWatchdog();
       _controller.setupOrientations();
-      _startInterpolation();
+      _startInterpolationIfEnabled();
     });
   }
 
-  void _startInterpolation() {
+  void _startInterpolationIfEnabled() {
     final settings = ref.read(telemetrySettingsProvider);
     if (settings.interpolationEnabled) {
-      _ticker = createTicker(_onTick);
-      _ticker!.start();
+      _startTicker();
     }
+  }
+
+  void _startTicker() {
+    if (_ticker != null) return;
+    _ticker = createTicker(_onTick);
+    _ticker!.start();
+  }
+
+  void _stopTicker() {
+    _ticker?.stop();
+    _ticker?.dispose();
+    _ticker = null;
   }
 
   void _onTick(Duration elapsed) {
     if (!mounted) return;
 
     final rawData = ref.read(telemetryProvider);
-    
-    // Só atualiza target quando raw data muda (3-4Hz)
+
     if (rawData != _lastRawData) {
       _interpolation.setTarget(rawData);
       _lastRawData = rawData;
     }
-    
-    // Pega valor interpolado (60fps)
+
     setState(() {
       _displayData = _interpolation.getInterpolated();
     });
   }
 
+  void _handleToggleInterpolation() {
+    final wasEnabled = ref.read(telemetrySettingsProvider).interpolationEnabled;
+    
+    _controller.toggleInterpolation();
+
+    if (wasEnabled) {
+      // Desativando → para ticker
+      _stopTicker();
+    } else {
+      // Ativando → inicia ticker e reseta interpolação
+      _interpolation.reset();
+      _startTicker();
+    }
+  }
+
   @override
   void dispose() {
-    _ticker?.stop();
-    _ticker?.dispose();
+    _stopTicker();
     _pageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // 📡 Verifica se interpolação está ativa
     final settings = ref.watch(telemetrySettingsProvider);
-    
-    // Se interpolação desativada, usa dados brutos diretamente
-    final telemetry = settings.interpolationEnabled 
-        ? _displayData 
+
+    final telemetry = settings.interpolationEnabled
+        ? _displayData
         : ref.watch(telemetryProvider);
 
-    // 🔴 Verifica se dados estão stale (sem atualização > 1s)
     final isStale = settings.interpolationEnabled && _interpolation.isStale;
 
     return Scaffold(
@@ -101,7 +118,6 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
       body: SafeArea(
         child: Stack(
           children: [
-            // Conteúdo principal (instrumentos)
             PageView(
               controller: _pageController,
               children: [
@@ -109,15 +125,13 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
                 _buildTelemetryPage(telemetry),
               ],
             ),
-            
-            // 📡 INDICADOR DE STATUS (overlay no topo)
+
             const Positioned(
               top: 0,
               left: 0,
               child: ConnectionStatusWidget(),
             ),
 
-            // ⚠️ INDICADOR STALE (sem dados)
             if (isStale)
               Positioned(
                 top: 40,
@@ -149,7 +163,22 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 🔄 Botão Reconectar
+          // ✨ Toggle Interpolação
+          FloatingActionButton(
+            heroTag: 'interpolation',
+            onPressed: _handleToggleInterpolation,
+            backgroundColor: settings.interpolationEnabled 
+                ? Colors.green 
+                : Colors.grey,
+            child: Icon(
+              settings.interpolationEnabled 
+                  ? Icons.auto_awesome 
+                  : Icons.auto_awesome_outlined,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // 🔄 Reconectar
           FloatingActionButton(
             heroTag: 'reconnect',
             onPressed: () {
@@ -160,8 +189,8 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
             child: const Icon(Icons.refresh),
           ),
           const SizedBox(height: 8),
-          
-          // ❌ Botão Desconectar
+
+          // ❌ Desconectar
           FloatingActionButton(
             heroTag: 'disconnect',
             onPressed: _controller.disconnect,
@@ -173,19 +202,14 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
     );
   }
 
-  // ========================================
-  // PÁGINA 1: SIX-PACK
-  // ========================================
   Widget _buildSixPackPage(TelemetryData telemetry) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isLandscape = constraints.maxWidth > constraints.maxHeight;
 
         if (isLandscape) {
-          // LANDSCAPE: 2 linhas x 3 colunas
           return Column(
             children: [
-              // Linha superior
               Expanded(
                 child: Row(
                   children: [
@@ -213,7 +237,6 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
                   ],
                 ),
               ),
-              // Linha inferior
               Expanded(
                 child: Row(
                   children: [
@@ -243,10 +266,8 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
             ],
           );
         } else {
-          // PORTRAIT: 3 linhas x 2 colunas
           return Column(
             children: [
-              // Linha 1: Velocímetro | Horizonte
               Expanded(
                 child: Row(
                   children: [
@@ -266,7 +287,6 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
                   ],
                 ),
               ),
-              // Linha 2: Altímetro | Bússola
               Expanded(
                 child: Row(
                   children: [
@@ -286,7 +306,6 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
                   ],
                 ),
               ),
-              // Linha 3: Coordenador | Variômetro
               Expanded(
                 child: Row(
                   children: [
@@ -315,20 +334,15 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
     );
   }
 
-  // ========================================
-  // PÁGINA 2: TELEMETRIA EXTRA
-  // ========================================
   Widget _buildTelemetryPage(TelemetryData telemetry) {
     return Column(
       children: [
-        // Mapa - TODA a tela horizontal
         Expanded(
           child: Container(
             width: double.infinity,
             color: Colors.grey.shade900,
             child: Stack(
               children: [
-                // Border apenas
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
@@ -336,7 +350,6 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
                     ),
                   ),
                 ),
-                // Conteúdo centralizado
                 Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -367,7 +380,6 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
             ),
           ),
         ),
-        // Temperatura e Pressão - altura mínima 70px
         SizedBox(
           height: 70,
           child: Row(

@@ -8,8 +8,14 @@ class InterpolationConstants {
 
   static const int targetFps = 60;
   static const double frameDurationMs = 1000.0 / targetFps;
-  static const int staleTimeoutMs = 1000;
-  static const int maxInterpolationTimeMs = 500;
+  
+  /// Timeout para considerar dados "stale" (sem sinal)
+  /// 3 segundos = ~9-12 pacotes perdidos consecutivos (tolerante a glitches)
+  static const int staleTimeoutMs = 3000;
+  
+  /// Tempo máximo interpolando sem dados novos
+  /// Após isso, congela no último valor (não extrapola)
+  static const int maxInterpolationTimeMs = 2000;
 
   // ============================================================================
   // LINEAR INTERPOLATION (lerp) - Simple values
@@ -23,34 +29,21 @@ class InterpolationConstants {
 
   // ============================================================================
   // SPRING INTERPOLATION - CRITICALLY DAMPED (sem bounce)
-  // 
-  // Fórmula damping crítico: damping = 2 * sqrt(stiffness)
-  // Usamos OVERDAMPED (damping > crítico) para zero oscilação
   // ============================================================================
 
-  /// Spring stiffness for pitch
   static const double springStiffnessPitch = 15.0;
-  /// Overdamped = sem bounce (crítico seria ~7.7)
   static const double springDampingPitch = 12.0;
 
-  /// Spring stiffness for roll
   static const double springStiffnessRoll = 15.0;
-  /// Overdamped = sem bounce
   static const double springDampingRoll = 12.0;
 
-  /// Spring stiffness for variometer
   static const double springStiffnessVario = 10.0;
-  /// Overdamped
   static const double springDampingVario = 10.0;
 
-  /// Spring stiffness for gyro Z (turn rate)
   static const double springStiffnessGyroZ = 12.0;
-  /// Overdamped
   static const double springDampingGyroZ = 10.0;
 
-  /// Spring stiffness for accelerometer
   static const double springStiffnessAccel = 12.0;
-  /// Overdamped
   static const double springDampingAccel = 10.0;
 
   // ============================================================================
