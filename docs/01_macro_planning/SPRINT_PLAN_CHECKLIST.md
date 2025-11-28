@@ -187,7 +187,7 @@ Buffer distribuído estrategicamente:
 
 - [ ] 📝 **Documentação**
   - [X] Docs arquitetura
-  - [ ] Docs API backend
+  - [X] Docs API backend
   - [ ] Setup dev guide
 
 - [ ] 🧪 **Testes Reforço**
