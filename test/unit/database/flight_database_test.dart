@@ -9,8 +9,6 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:path/path.dart';
-import '../../test_helper.dart';
 
 // Import da migration
 import 'package:qfly_avionica/data/database/migrations/migration_v1.dart';

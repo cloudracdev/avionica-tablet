@@ -47,7 +47,7 @@ class SyncQueueService {
   final _progressController = StreamController<SyncProgress>.broadcast();
 
   SyncQueueStatus _status = SyncQueueStatus.idle;
-  StreamSubscription? _connectivitySubscription;
+  StreamSubscription<ConnectivityState>? _connectivitySubscription;
   bool _isProcessing = false;
 
   SyncQueueService({

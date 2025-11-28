@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qfly_avionica/providers/connection_watchdog_provider.dart';
 import 'package:qfly_avionica/providers/telemetry_provider.dart';
 import 'package:qfly_avionica/providers/websocket_provider.dart';
-import 'package:qfly_avionica/models/telemetry_data.dart';
 
 void main() {
   group('ConnectionWatchdog Tests', () {

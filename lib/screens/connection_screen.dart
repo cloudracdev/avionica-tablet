@@ -156,7 +156,7 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
   }
 
   void _showConnectionError() {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('❌ Falha na Conexão'),

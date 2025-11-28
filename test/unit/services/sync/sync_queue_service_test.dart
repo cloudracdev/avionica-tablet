@@ -3,8 +3,6 @@ import 'package:qfly_avionica/services/sync/sync_queue_service.dart';
 import 'package:qfly_avionica/services/sync/connectivity_service.dart';
 import 'package:qfly_avionica/services/sync/i_sync_remote_service.dart';
 import 'package:qfly_avionica/data/repositories/flight_session_repository.dart';
-import 'package:qfly_avionica/data/database/models/flight_session_entity.dart';
-import 'package:qfly_avionica/data/database/flight_database.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {

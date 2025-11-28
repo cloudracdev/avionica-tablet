@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import '../painters/altimetro_painter.dart';
 
@@ -103,7 +102,7 @@ class _AltimetroWidgetState extends State<AltimetroWidget> {
 
   /// Shows Kollsman adjustment dialog.
   void _mostrarAjusteKollsman(BuildContext context) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => _KollsmanDialog(
         qnhInicial: _qnhAjustado,
@@ -120,7 +119,7 @@ class _AltimetroWidgetState extends State<AltimetroWidget> {
 /// Dialog for adjusting QNH (Kollsman window).
 class _KollsmanDialog extends StatefulWidget {
   final double qnhInicial;
-  final Function(double) onQnhChanged;
+  final void Function(double) onQnhChanged;
 
   const _KollsmanDialog({
     required this.qnhInicial,

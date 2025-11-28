@@ -9,7 +9,6 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import '../../test_helper.dart';
 
 import 'package:qfly_avionica/data/repositories/flight_session_repository.dart';
 import 'package:qfly_avionica/data/database/models/flight_session_entity.dart';
@@ -23,9 +22,13 @@ void main() {
     databaseFactory = databaseFactoryFfi;
   });
 
-  // 🧹 Cleanup
+  // 🧹 Cleanup antes e após cada teste
+  setUp(() async {
+    await FlightDatabase.deleteAll();
+  });
+
   tearDown(() async {
-    await FlightDatabase.closeAll();
+    await FlightDatabase.deleteAll();
   });
 
   group('📦 FlightSessionRepository - Create', () {
@@ -57,8 +60,6 @@ void main() {
       expect(retrieved!.id, flightId);
       expect(retrieved.instructorId, 'inst_123');
       expect(retrieved.aircraftId, 'PT-ABC');
-      
-      await FlightDatabase.delete(flightId);
     });
 
     test('❌ Deve rejeitar session inválida (campos obrigatórios)', () async {
@@ -80,8 +81,6 @@ void main() {
         () async => await repository.insert(flightId, invalidSession),
         throwsA(isA<Exception>()),
       );
-
-      await FlightDatabase.delete(flightId);
     });
 
     test('❌ Deve rejeitar status inválido', () async {
@@ -103,8 +102,6 @@ void main() {
         () async => await repository.insert(flightId, invalidSession),
         throwsA(isA<Exception>()),
       );
-
-      await FlightDatabase.delete(flightId);
     });
 
     test('❌ Deve rejeitar bateria fora do range', () async {
@@ -127,8 +124,6 @@ void main() {
         () async => await repository.insert(flightId, invalidSession),
         throwsA(isA<Exception>()),
       );
-
-      await FlightDatabase.delete(flightId);
     });
   });
 
@@ -156,8 +151,6 @@ void main() {
       expect(retrieved, isNotNull);
       expect(retrieved!.instructorId, 'inst_789');
       expect(retrieved.aircraftId, 'PT-XYZ');
-
-      await FlightDatabase.delete(flightId);
     });
 
     test('✅ getById deve retornar null para inexistente', () async {
@@ -198,10 +191,7 @@ void main() {
       await repository.insert(flight2, session2);
 
       final all = await repository.getAll();
-      expect(all.length, greaterThanOrEqualTo(2));
-
-      await FlightDatabase.delete(flight1);
-      await FlightDatabase.delete(flight2);
+      expect(all.length, equals(2));
     });
 
     test('✅ getPendingSync deve filtrar por sync_status', () async {
@@ -241,9 +231,6 @@ void main() {
       final pendingIds = pending.map((s) => s.id).toList();
       expect(pendingIds, contains(flightPending));
       expect(pendingIds, isNot(contains(flightSynced)));
-
-      await FlightDatabase.delete(flightPending);
-      await FlightDatabase.delete(flightSynced);
     });
 
     test('✅ getByStatus deve filtrar corretamente', () async {
@@ -283,9 +270,6 @@ void main() {
       
       expect(activeIds, contains(flightActive));
       expect(activeIds, isNot(contains(flightCompleted)));
-
-      await FlightDatabase.delete(flightActive);
-      await FlightDatabase.delete(flightCompleted);
     });
 
     test('✅ exists deve validar existência', () async {
@@ -310,8 +294,6 @@ void main() {
 
       // Depois de inserir
       expect(await repository.exists(flightId), true);
-
-      await FlightDatabase.delete(flightId);
     });
   });
 
@@ -348,8 +330,6 @@ void main() {
       final retrieved = await repository.getById(flightId);
       expect(retrieved!.totalPoints, 500);
       expect(retrieved.status, 'completed');
-
-      await FlightDatabase.delete(flightId);
     });
 
     test('✅ updateSyncStatus deve atualizar apenas sync', () async {
@@ -376,8 +356,6 @@ void main() {
       final retrieved = await repository.getById(flightId);
       expect(retrieved!.syncStatus, 'completed');
       expect(retrieved.status, 'active'); // Status não mudou
-
-      await FlightDatabase.delete(flightId);
     });
 
     test('✅ updateSyncStatus com failed deve incrementar attempts', () async {
@@ -408,8 +386,6 @@ void main() {
       expect(retrieved!.syncStatus, 'failed');
       expect(retrieved.syncAttempts, 3); // Incrementado
       expect(retrieved.syncError, 'Network timeout');
-
-      await FlightDatabase.delete(flightId);
     });
 
     test('✅ updateStatus completed deve setar endTime', () async {
@@ -435,8 +411,6 @@ void main() {
       final retrieved = await repository.getById(flightId);
       expect(retrieved!.status, 'completed');
       expect(retrieved.endTime, isNotNull);
-
-      await FlightDatabase.delete(flightId);
     });
   });
 
@@ -468,8 +442,6 @@ void main() {
 
       // Verificar que foi removido
       expect(await repository.exists(flightId), false);
-
-      await FlightDatabase.delete(flightId);
     });
 
     test('❌ delete deve lançar erro para inexistente', () async {
@@ -516,10 +488,7 @@ void main() {
       await repository.insert(flight2, session2);
 
       final count = await repository.count();
-      expect(count, greaterThanOrEqualTo(2));
-
-      await FlightDatabase.delete(flight1);
-      await FlightDatabase.delete(flight2);
+      expect(count, equals(2));
     });
 
     test('✅ Entity helpers devem funcionar', () {

@@ -9,9 +9,6 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:path/path.dart';
-import 'dart:io';
-import '../../test_helper.dart';
 
 import 'package:qfly_avionica/data/database/flight_database.dart';
 
@@ -25,9 +22,13 @@ void main() {
     databaseFactory = databaseFactoryFfi;
   });
 
-  // 🧹 Cleanup após cada teste
+  // 🧹 Cleanup antes e após cada teste
+  setUp(() async {
+    await FlightDatabase.deleteAll();
+  });
+
   tearDown(() async {
-    await FlightDatabase.closeAll();
+    await FlightDatabase.deleteAll();
   });
 
   group('📦 FlightDatabase - Create & Open', () {
@@ -84,7 +85,6 @@ void main() {
       );
       
       await FlightDatabase.close(flightId);
-      await FlightDatabase.delete(flightId);
     });
 
     test('✅ Deve abrir database existente', () async {
@@ -101,7 +101,6 @@ void main() {
       expect(db.isOpen, true);
       
       await FlightDatabase.close(flightId);
-      await FlightDatabase.delete(flightId);
     });
 
     test('❌ Deve lançar erro ao abrir database inexistente', () async {
@@ -122,7 +121,6 @@ void main() {
       expect(identical(db1, db2), true);
       
       await FlightDatabase.close(flightId);
-      await FlightDatabase.delete(flightId);
     });
   });
 
@@ -135,8 +133,6 @@ void main() {
       
       await FlightDatabase.close(flightId);
       expect(db.isOpen, false);
-      
-      await FlightDatabase.delete(flightId);
     });
 
     test('✅ Deve deletar database do filesystem', () async {
@@ -171,7 +167,6 @@ void main() {
       await FlightDatabase.close(flightId); // Terceira vez
       
       // Não deve lançar erro
-      await FlightDatabase.delete(flightId);
     });
 
     test('✅ closeAll deve fechar todas conexões', () async {
@@ -192,10 +187,6 @@ void main() {
       expect(db1.isOpen, false);
       expect(db2.isOpen, false);
       expect(db3.isOpen, false);
-      
-      await FlightDatabase.delete(flight1);
-      await FlightDatabase.delete(flight2);
-      await FlightDatabase.delete(flight3);
     });
   });
 
@@ -203,8 +194,8 @@ void main() {
     test('✅ listAllFlights deve retornar lista vazia inicialmente', () async {
       final flights = await FlightDatabase.listAllFlights();
       
-      // Pode ter outros DBs de testes anteriores
       expect(flights, isA<List<String>>());
+      expect(flights, isEmpty);
     });
 
     test('✅ listAllFlights deve retornar databases criados', () async {
@@ -218,9 +209,6 @@ void main() {
       
       expect(flights, contains(flight1));
       expect(flights, contains(flight2));
-      
-      await FlightDatabase.delete(flight1);
-      await FlightDatabase.delete(flight2);
     });
 
     test('✅ listPendingSync deve filtrar por sync_status', () async {
@@ -260,9 +248,6 @@ void main() {
       
       expect(pending, contains(flightPending));
       expect(pending, isNot(contains(flightSynced)));
-      
-      await FlightDatabase.delete(flightPending);
-      await FlightDatabase.delete(flightSynced);
     });
 
     test('✅ listPendingSync deve incluir status failed', () async {
@@ -284,8 +269,6 @@ void main() {
       final pending = await FlightDatabase.listPendingSync();
       
       expect(pending, contains(flightFailed));
-      
-      await FlightDatabase.delete(flightFailed);
     });
   });
 
@@ -319,8 +302,6 @@ void main() {
       expect(info['studentId'], 'student_456');
       expect(info['aircraftId'], 'PT-ABC');
       expect(info['sizeBytes'], greaterThan(0));
-      
-      await FlightDatabase.delete(flightId);
     });
 
     test('✅ getDatabaseInfo deve retornar null para DB inexistente', () async {
@@ -364,13 +345,10 @@ void main() {
       
       final stats = await FlightDatabase.getStatistics();
       
-      expect(stats['totalFlights'], greaterThanOrEqualTo(2));
-      expect(stats['pendingSync'], greaterThanOrEqualTo(1));
+      expect(stats['totalFlights'], equals(2));
+      expect(stats['pendingSync'], equals(1));
       expect(stats['totalSizeBytes'], greaterThan(0));
-      expect(stats['totalPoints'], greaterThanOrEqualTo(8000));
-      
-      await FlightDatabase.delete(flight1);
-      await FlightDatabase.delete(flight2);
+      expect(stats['totalPoints'], equals(8000));
     });
   });
 
@@ -383,8 +361,6 @@ void main() {
       final isValid = await FlightDatabase.checkIntegrity(flightId);
       
       expect(isValid, true);
-      
-      await FlightDatabase.delete(flightId);
     });
 
     test('✅ checkIntegrity deve retornar false para DB inexistente', () async {
@@ -414,8 +390,6 @@ void main() {
       
       final isValid = await FlightDatabase.checkIntegrity(flightId);
       expect(isValid, true);
-      
-      await FlightDatabase.delete(flightId);
     });
   });
 
@@ -427,7 +401,6 @@ void main() {
       expect(db.isOpen, true);
       
       await FlightDatabase.close(flightId);
-      await FlightDatabase.delete(flightId);
     });
 
     test('✅ Deve lidar com UUID padrão', () async {
@@ -440,7 +413,6 @@ void main() {
       expect(path, contains(flightId));
       
       await FlightDatabase.close(flightId);
-      await FlightDatabase.delete(flightId);
     });
 
     test('✅ Deve reabrir após close', () async {
@@ -455,7 +427,6 @@ void main() {
       expect(db.isOpen, true);
       
       await FlightDatabase.close(flightId);
-      await FlightDatabase.delete(flightId);
     });
 
     test('✅ Múltiplos databases independentes', () async {
@@ -476,9 +447,35 @@ void main() {
       expect(identical(db2, db3), false);
       
       await FlightDatabase.closeAll();
-      await FlightDatabase.delete(flight1);
-      await FlightDatabase.delete(flight2);
-      await FlightDatabase.delete(flight3);
+    });
+  });
+
+  group('🧹 FlightDatabase - DeleteAll', () {
+    test('✅ deleteAll deve remover todos databases', () async {
+      // Criar vários databases
+      await FlightDatabase.create('delete_all_1');
+      await FlightDatabase.create('delete_all_2');
+      await FlightDatabase.create('delete_all_3');
+      
+      var flights = await FlightDatabase.listAllFlights();
+      expect(flights.length, equals(3));
+      
+      // Deletar todos
+      await FlightDatabase.deleteAll();
+      
+      flights = await FlightDatabase.listAllFlights();
+      expect(flights, isEmpty);
+    });
+
+    test('✅ deleteAll deve funcionar com lista vazia', () async {
+      // Garantir que está vazio
+      await FlightDatabase.deleteAll();
+      
+      // Chamar novamente não deve dar erro
+      await FlightDatabase.deleteAll();
+      
+      final flights = await FlightDatabase.listAllFlights();
+      expect(flights, isEmpty);
     });
   });
 }

@@ -385,4 +385,29 @@ class FlightDatabase {
       return false;
     }
   }
+
+  /// 🧹 Deletar TODOS os databases (uso em testes)
+  /// 
+  /// ⚠️ CUIDADO: Deleta permanentemente todos os voos!
+  /// Útil para cleanup em testes e reset completo.
+  static Future<void> deleteAll() async {
+    // Fechar todas conexões primeiro
+    await closeAll();
+    
+    // Listar todos os flights
+    final allFlights = await listAllFlights();
+    
+    // Deletar cada um
+    for (final flightId in allFlights) {
+      try {
+        final path = await getDatabasePath(flightId);
+        final file = File(path);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (_) {
+        // Ignorar erros de delete individual
+      }
+    }
+  }
 }

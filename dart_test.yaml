@@ -1,0 +1,4 @@
+# Configuração de testes Flutter
+# Evita conflitos de I/O em testes de database
+
+concurrency: 1
