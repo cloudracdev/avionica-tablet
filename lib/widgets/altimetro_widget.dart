@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../painters/altimetro_painter.dart';
+import '../providers/kollsman_provider.dart';
 
 /// Altimeter instrument widget.
 ///
 /// Displays altitude in feet and meters with three pointers (100ft, 1000ft, 10000ft).
 /// Includes Kollsman window showing current QNH setting.
 /// Tap to adjust QNH (barometric pressure setting).
-class AltimetroWidget extends StatefulWidget {
-  /// CALIBRATED altitude in meters (already has offset applied)
+class AltimetroWidget extends ConsumerWidget {
+  /// Altitude em metros (JÁ CALIBRADA + KOLLSMAN aplicado)
   final double altitude;
 
   /// Barometric pressure in Pascals
@@ -20,32 +22,15 @@ class AltimetroWidget extends StatefulWidget {
   });
 
   @override
-  State<AltimetroWidget> createState() => _AltimetroWidgetState();
-}
-
-class _AltimetroWidgetState extends State<AltimetroWidget> {
-  /// QNH padrão (Standard pressure)
-  static const double _qnhPadrao = 29.92; // inHg = 1013.25 hPa
-
-  /// QNH adjusted by user (default: 29.92 inHg)
-  double _qnhAjustado = 29.92;
-
-  @override
-  Widget build(BuildContext context) {
-    // ✅ ALTITUDE DO SENSOR (calibrada)
-    final double altitudeSensorMetros = widget.altitude;
-    final double altitudeSensorFeet = altitudeSensorMetros * 3.28084;
-
-    // ✅ CORREÇÃO KOLLSMAN: 1 inHg ≈ 1000 ft
-    final double diferencaQnh = _qnhAjustado - _qnhPadrao;
-    final double correcaoFeet = diferencaQnh * 1000;
-
-    // ✅ ALTITUDE CORRIGIDA
-    final double altitudeFeet = altitudeSensorFeet + correcaoFeet;
-    final double altitudeMetros = altitudeFeet / 3.28084;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final kollsmanState = ref.watch(kollsmanProvider);
+    
+    // ✅ ALTITUDE JÁ VEM CORRIGIDA DO PROVIDER
+    final double altitudeMetros = altitude;
+    final double altitudeFeet = altitudeMetros * 3.28084;
 
     return GestureDetector(
-      onTap: () => _mostrarAjusteKollsman(context),
+      onTap: () => _mostrarAjusteKollsman(context, ref),
       child: Container(
         margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
@@ -71,7 +56,7 @@ class _AltimetroWidgetState extends State<AltimetroWidget> {
               ),
             ),
 
-            // Instrument (uses separate Painter)
+            // Instrument
             Expanded(
               child: Center(
                 child: AspectRatio(
@@ -82,7 +67,7 @@ class _AltimetroWidgetState extends State<AltimetroWidget> {
                       painter: AltimetroPainter(
                         altitudeFeet: altitudeFeet,
                         altitudeMeters: altitudeMetros,
-                        qnhInHg: _qnhAjustado,
+                        qnhInHg: kollsmanState.qnhInHg,
                       ),
                     ),
                   ),
@@ -109,16 +94,15 @@ class _AltimetroWidgetState extends State<AltimetroWidget> {
     );
   }
 
-  /// Shows Kollsman adjustment dialog.
-  void _mostrarAjusteKollsman(BuildContext context) {
+  void _mostrarAjusteKollsman(BuildContext context, WidgetRef ref) {
+    final currentQnh = ref.read(kollsmanProvider).qnhInHg;
+    
     showDialog<void>(
       context: context,
       builder: (context) => _KollsmanDialog(
-        qnhInicial: _qnhAjustado,
+        qnhInicial: currentQnh,
         onQnhChanged: (novoQnh) {
-          setState(() {
-            _qnhAjustado = novoQnh;
-          });
+          ref.read(kollsmanProvider.notifier).setQnh(novoQnh);
         },
       ),
     );
@@ -154,7 +138,6 @@ class _KollsmanDialogState extends State<_KollsmanDialog> {
     });
   }
 
-  /// Calcula prévia da correção de altitude
   int _calcularCorrecao() {
     const double qnhPadrao = 29.92;
     return ((_qnh - qnhPadrao) * 1000).round();
@@ -177,7 +160,6 @@ class _KollsmanDialogState extends State<_KollsmanDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Title
             const Text(
               '🎛️ AJUSTE KOLLSMAN',
               style: TextStyle(
@@ -194,7 +176,6 @@ class _KollsmanDialogState extends State<_KollsmanDialog> {
             ),
             const SizedBox(height: 24),
 
-            // QNH Display
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
@@ -236,7 +217,6 @@ class _KollsmanDialogState extends State<_KollsmanDialog> {
 
             const SizedBox(height: 12),
 
-            // 🆕 Prévia da correção de altitude
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
@@ -259,7 +239,6 @@ class _KollsmanDialogState extends State<_KollsmanDialog> {
 
             const SizedBox(height: 20),
 
-            // Adjustment buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -292,7 +271,6 @@ class _KollsmanDialogState extends State<_KollsmanDialog> {
 
             const SizedBox(height: 24),
 
-            // Info
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -321,14 +299,13 @@ class _KollsmanDialogState extends State<_KollsmanDialog> {
 
             const SizedBox(height: 20),
 
-            // Action buttons
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () {
                       setState(() {
-                        _qnh = 29.92; // Reset to standard
+                        _qnh = 29.92;
                       });
                     },
                     style: OutlinedButton.styleFrom(
@@ -369,7 +346,6 @@ class _KollsmanDialogState extends State<_KollsmanDialog> {
   }
 }
 
-/// Adjustment button widget.
 class _BotaoAjuste extends StatelessWidget {
   final IconData icon;
   final String label;

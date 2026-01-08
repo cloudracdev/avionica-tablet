@@ -5,6 +5,7 @@ import '../models/flight_data.dart';
 import '../services/calibration/calibration_service.dart';
 import '../data/repositories/telemetry_repository.dart';
 import '../core/utils/logger.dart';
+import 'kollsman_provider.dart';
 import 'mock_mode_provider.dart';
 
 /// 🎯 PROVIDER: Serviço de calibração (singleton)
@@ -15,10 +16,9 @@ final calibrationServiceProvider = Provider<CalibrationService>((ref) {
 /// 🎯 PROVIDER: Telemetria processada (StateNotifier)
 final telemetryProvider = StateNotifierProvider<TelemetryNotifier, TelemetryData>((ref) {
   final repository = ref.watch(telemetryRepositoryProvider);
-  return TelemetryNotifier(
-    repository,
-    ref.watch(calibrationServiceProvider),
-  );
+  final calibration = ref.watch(calibrationServiceProvider);
+  final kollsman = ref.watch(kollsmanProvider.notifier);
+  return TelemetryNotifier(repository, calibration, kollsman);
 });
 
 /// 🎯 PROVIDER: Frequência de atualização (Hz)
@@ -31,6 +31,7 @@ final telemetryHzProvider = Provider<int>((ref) {
 class TelemetryNotifier extends StateNotifier<TelemetryData> {
   final TelemetryRepository _repository;
   final CalibrationService _calibration;
+  final KollsmanNotifier _kollsman;
   StreamSubscription<FlightData>? _subscription;
 
   int _frameCount = 0;
@@ -40,7 +41,7 @@ class TelemetryNotifier extends StateNotifier<TelemetryData> {
   // 🛡️ Último valor válido para fallback
   TelemetryData? _lastValidData;
 
-  TelemetryNotifier(this._repository, this._calibration)
+  TelemetryNotifier(this._repository, this._calibration, this._kollsman)
       : super(TelemetryData.initial()) {
     _lastValidData = TelemetryData.initial();
     _listenToRepository();
@@ -52,7 +53,6 @@ class TelemetryNotifier extends StateNotifier<TelemetryData> {
     _subscription = _repository.getFlightDataStream().listen(
       (flightData) {
         try {
-          // 🛡️ ERROR BOUNDARY: Processamento com try-catch
           _processFlightData(flightData);
         } catch (e, stackTrace) {
           Logger.error(
@@ -61,7 +61,6 @@ class TelemetryNotifier extends StateNotifier<TelemetryData> {
             stackTrace,
             'TelemetryNotifier',
           );
-          // 🛡️ Fallback: mantém último valor válido
           if (_lastValidData != null) {
             state = _lastValidData!;
           }
@@ -69,9 +68,8 @@ class TelemetryNotifier extends StateNotifier<TelemetryData> {
       },
       onError: (error) {
         Logger.error('❌ Erro no stream do repository', error, null, 'TelemetryNotifier');
-        // Stream continua, mantém último valor válido
       },
-      cancelOnError: false, // 🛡️ Não cancela stream em erro
+      cancelOnError: false,
     );
   }
 
@@ -91,38 +89,38 @@ class TelemetryNotifier extends StateNotifier<TelemetryData> {
     _frameCount++;
 
     try {
-      // APLICAR CALIBRAÇÃO
-      final velocidade = flightData.velocidade;
-      final altitude = _calibration.applyCalibratedAltitude(flightData.altitude);
+      // 1️⃣ CALIBRAÇÃO (offset do sensor)
+      final altitudeCalibrada = _calibration.applyCalibratedAltitude(flightData.altitude);
+      
+      // 2️⃣ KOLLSMAN (correção barométrica)
+      final altitudeFinal = _kollsman.applyKollsman(altitudeCalibrada);
+      
+      // 3️⃣ OUTROS INSTRUMENTOS (só calibração)
       final heading = _calibration.applyCalibratedHeading(flightData.heading);
       final pitch = _calibration.applyCalibratedPitch(flightData.pitch);
       final roll = _calibration.applyCalibratedRoll(flightData.roll);
-      final vario = 0.0;
-      final gyroZ = flightData.gyroZ;
 
       final newData = TelemetryData(
-        velocidade: velocidade,
-        altitude: altitude,
+        velocidade: flightData.velocidade,
+        altitude: altitudeFinal,
         heading: heading,
         pitch: pitch,
         roll: roll,
-        vario: vario,
+        vario: 0.0,
         temperatura: flightData.temperatura,
         pressao: flightData.pressao,
         lat: flightData.lat,
         lng: flightData.lng,
-        gyroZ: gyroZ,
+        gyroZ: flightData.gyroZ,
         accelX: flightData.accelX,
         accelY: flightData.accelY,
         timestamp: flightData.timestamp,
       );
 
-      // 🛡️ Atualiza estado e salva como último válido
       state = newData;
       _lastValidData = newData;
     } catch (e) {
       Logger.warning('⚠️ Erro na calibração, mantendo valor anterior', 'TelemetryNotifier');
-      // Mantém estado atual, não atualiza
     }
   }
 }

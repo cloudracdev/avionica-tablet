@@ -52,20 +52,46 @@ class _MyFlightsScreenState extends ConsumerState<MyFlightsScreen> {
     final points = await repo.getAllByFlight(flightId);
     
     if (points.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nenhum ponto para exportar')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Nenhum ponto para exportar')),
+        );
+      }
       return;
     }
 
-    // Gerar CSV
+    // Gerar CSV com TODOS os campos e unidades de aviação
     final buffer = StringBuffer();
-    buffer.writeln('timestamp,lat,lng,altitude,velocity,heading,pitch,roll,data_quality');
+    buffer.writeln(
+      'timestamp,lat,lng,'
+      'altitude_ft,velocity_kts,vertical_speed_fpm,'
+      'heading,pitch,roll,'
+      'accel_x,accel_y,gyro_z,'
+      'temperature_c,pressure_pa,data_quality'
+    );
     
     for (final p in points) {
+      // Conversões para unidades de aviação
+      final altitudeFt = (p.altitude ?? 0) * 3.28084;
+      final velocityKts = (p.velocity ?? 0) / 1.852;
+      final varioFpm = (p.verticalSpeed ?? 0) * 196.85;
+      
       buffer.writeln(
-        '${p.timestamp},${p.lat},${p.lng},${p.altitude},${p.velocity},'
-        '${p.heading},${p.imuPitch},${p.imuRoll},${p.dataQuality}'
+        '${p.timestamp},'
+        '${p.lat},'
+        '${p.lng},'
+        '${altitudeFt.toStringAsFixed(1)},'
+        '${velocityKts.toStringAsFixed(1)},'
+        '${varioFpm.toStringAsFixed(1)},'
+        '${p.heading ?? 0},'
+        '${p.imuPitch ?? 0},'
+        '${p.imuRoll ?? 0},'
+        '${p.accelX ?? 0},'
+        '${p.accelY ?? 0},'
+        '${p.gyroZ ?? 0},'
+        '${p.baroTemperature ?? 0},'
+        '${p.baroPressure ?? 0},'
+        '${p.dataQuality}'
       );
     }
 
@@ -75,11 +101,13 @@ class _MyFlightsScreenState extends ConsumerState<MyFlightsScreen> {
     await file.writeAsString(buffer.toString());
 
     // Compartilhar
-    await Share.shareXFiles(
-      [XFile(file.path)],
-      subject: 'Voo $flightId',
-      sharePositionOrigin: const Rect.fromLTWH(0, 0, 100, 100),
-    );
+    if (mounted) {
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'Voo $flightId',
+        sharePositionOrigin: const Rect.fromLTWH(0, 0, 100, 100),
+      );
+    }
   }
 
   String _formatDate(int? timestamp) {
