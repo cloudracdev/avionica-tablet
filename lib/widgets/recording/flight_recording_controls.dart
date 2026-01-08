@@ -49,27 +49,20 @@ class _RecordingInactive extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.black87,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ElevatedButton.icon(
-        onPressed: () {
-          ref.read(flightRecordingProvider.notifier).startRecording(
-            instructorId: instructorId,
-            studentId: studentId,
-            aircraftId: aircraftId,
-          );
-        },
-        icon: const Icon(Icons.fiber_manual_record, color: Colors.white),
-        label: const Text('INICIAR GRAVAÇÃO'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.green,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        ),
+    return ElevatedButton.icon(
+      onPressed: () {
+        ref.read(flightRecordingProvider.notifier).startRecording(
+          instructorId: instructorId,
+          studentId: studentId,
+          aircraftId: aircraftId,
+        );
+      },
+      icon: const Icon(Icons.fiber_manual_record, color: Colors.white),
+      label: const Text('INICIAR GRAVAÇÃO'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.green,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       ),
     );
   }
@@ -88,63 +81,81 @@ class _RecordingActive extends ConsumerWidget {
     return '$hours:$minutes:$seconds';
   }
 
+  String _formatPoints(int points) {
+    if (points >= 1000000) {
+      return '${(points / 1000000).toStringAsFixed(1)}M';
+    } else if (points >= 1000) {
+      return '${(points / 1000).toStringAsFixed(1)}k';
+    }
+    return '$points';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.black87,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Indicador REC piscando
-          const _BlinkingRec(),
-          const SizedBox(width: 12),
-          
-          // Tempo
-          Text(
-            _formatDuration(state.duration),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontFamily: 'monospace',
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(width: 16),
-          
-          // Pontos salvos
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              '${state.pointsRecorded} pts',
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isSmall = constraints.maxWidth < 300;
+        
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Indicador REC piscando
+            const _BlinkingRec(),
+            const SizedBox(width: 8),
+            
+            // Tempo
+            Text(
+              _formatDuration(state.duration),
               style: const TextStyle(
-                color: Colors.greenAccent,
-                fontSize: 14,
+                color: Colors.white,
+                fontSize: 16,
+                fontFamily: 'monospace',
                 fontWeight: FontWeight.bold,
               ),
             ),
-          ),
-          const SizedBox(width: 16),
-          
-          // Botão FINALIZAR
-          ElevatedButton.icon(
-            onPressed: () => _showStopDialog(context, ref),
-            icon: const Icon(Icons.stop, color: Colors.white),
-            label: const Text('FINALIZAR'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+            const SizedBox(width: 8),
+            
+            // Pontos salvos
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                _formatPoints(state.pointsRecorded),
+                style: const TextStyle(
+                  color: Colors.greenAccent,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-          ),
-        ],
-      ),
+            const SizedBox(width: 8),
+            
+            // Botão FINALIZAR
+            isSmall
+                ? IconButton(
+                    onPressed: () => _showStopDialog(context, ref),
+                    icon: const Icon(Icons.stop, color: Colors.white),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      padding: const EdgeInsets.all(8),
+                    ),
+                  )
+                : ElevatedButton.icon(
+                    onPressed: () => _showStopDialog(context, ref),
+                    icon: const Icon(Icons.stop, color: Colors.white, size: 18),
+                    label: const Text('FINALIZAR'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+          ],
+        );
+      },
     );
   }
 
