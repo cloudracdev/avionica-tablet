@@ -348,6 +348,18 @@ class _ConnectionScreenState extends ConsumerState<ConnectionScreen> {
                             fontSize: 12,
                           ),
                         ),
+
+                      const SizedBox(height: 32),
+
+                      OutlinedButton.icon(
+                        onPressed: () => context.push('/my-flights'),
+                        icon: const Icon(Icons.folder_open, color: Colors.white70),
+                        label: const Text('MEUS VOOS', style: TextStyle(color: Colors.white70)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.white38),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
                     ],
                   ),
                 ),

@@ -13,7 +13,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:io';
 
-import 'migrations/migration_v1.dart';
+import 'migrations/migration_v1_statements.dart';
 
 /// 🏭 Factory Service para gerenciar databases de voos
 class FlightDatabase {
@@ -71,10 +71,10 @@ class FlightDatabase {
     // Criar e executar migration
     final db = await openDatabase(
       path,
-      version: MigrationV1.version,
+      version: MigrationV1Statements.version,
       onCreate: (db, version) async {
         // Executar migration v1
-        await db.execute(MigrationV1.create);
+        for (final sql in MigrationV1Statements.statements) { await db.execute(sql); }
       },
     );
 
@@ -108,7 +108,7 @@ class FlightDatabase {
     // Abrir database
     final db = await openDatabase(
       path,
-      version: MigrationV1.version,
+      version: MigrationV1Statements.version,
       onUpgrade: (db, oldVersion, newVersion) async {
         // TODO: Implementar migrations futuras (v2, v3, etc)
         // Por enquanto só temos v1

@@ -9,6 +9,7 @@ import '../../screens/selecao_screen.dart';
 import '../../screens/sixpack_screen.dart';
 import '../../screens/calibration_screen.dart';
 import '../../screens/origem_destino_screen.dart';
+import '../../screens/my_flights_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -66,6 +67,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/sixpack',
         name: 'sixpack',
         builder: (context, state) => const SixPackScreen(),
+      ),
+      GoRoute(
+        path: '/my-flights',
+        name: 'my-flights',
+        builder: (context, state) => const MyFlightsScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

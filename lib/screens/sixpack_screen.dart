@@ -13,6 +13,8 @@ import '../widgets/bussola_widget.dart';
 import '../widgets/coordenador_widget.dart';
 import '../widgets/variometro_widget.dart';
 import '../widgets/connection_status_widget.dart';
+import '../widgets/recording/flight_recording_controls.dart';
+import '../providers/flight_recording_provider.dart';
 
 /// 🎯 SixPack Screen - Tela principal de instrumentos
 class SixPackScreen extends ConsumerStatefulWidget {
@@ -32,6 +34,7 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
   Ticker? _ticker;
   TelemetryData _displayData = TelemetryData.initial();
   TelemetryData? _lastRawData;
+  bool _recoveryDialogShown = false;
 
   @override
   void initState() {
@@ -44,6 +47,7 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
       _controller.initializeWatchdog();
       _controller.setupOrientations();
       _startInterpolationIfEnabled();
+      _checkAndShowRecoveryDialog();
     });
   }
 
@@ -52,6 +56,50 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
     if (settings.interpolationEnabled) {
       _startTicker();
     }
+  }
+
+  void _checkAndShowRecoveryDialog() {
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (!mounted || _recoveryDialogShown) return;
+      final state = ref.read(flightRecordingProvider);
+      if (state.flightId != null && !state.isRecording) {
+        _recoveryDialogShown = true;
+        _showRecoveryDialog(state.flightId!, state.pointsRecorded);
+      }
+    });
+    return;
+  }
+
+  void _showRecoveryDialog(String flightId, int points) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('⚠️ Voo Interrompido'),
+        content: Text(
+          'Encontrado voo não finalizado.\n\n'
+          'ID: ${flightId.substring(0, 8)}...\n'
+          'Pontos salvos: $points\n\n'
+          'Deseja retomar ou descartar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref.read(flightRecordingProvider.notifier).discardRecording();
+            },
+            child: const Text('DESCARTAR', style: TextStyle(color: Colors.red)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref.read(flightRecordingProvider.notifier).resumeRecording();
+            },
+            child: const Text('RETOMAR'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _startTicker() {
@@ -124,6 +172,17 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
                 _buildSixPackPage(telemetry),
                 _buildTelemetryPage(telemetry),
               ],
+            ),
+
+            Positioned(
+              bottom: 16,
+              left: 16,
+              right: 80,
+              child: FlightRecordingControls(
+                instructorId: 'mock_instructor',
+                studentId: 'mock_student',
+                aircraftId: 'mock_aircraft',
+              ),
             ),
 
             const Positioned(
