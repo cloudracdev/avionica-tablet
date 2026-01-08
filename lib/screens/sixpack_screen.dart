@@ -35,6 +35,7 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
   TelemetryData _displayData = TelemetryData.initial();
   TelemetryData? _lastRawData;
   bool _recoveryDialogShown = false;
+  bool _controlsVisible = true;
 
   @override
   void initState() {
@@ -58,6 +59,10 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
     }
   }
 
+  void _toggleControls() {
+    setState(() => _controlsVisible = !_controlsVisible);
+  }
+
   void _checkAndShowRecoveryDialog() {
     Future.delayed(const Duration(milliseconds: 800), () {
       if (!mounted || _recoveryDialogShown) return;
@@ -67,7 +72,6 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
         _showRecoveryDialog(state.flightId!, state.pointsRecorded);
       }
     });
-    return;
   }
 
   void _showRecoveryDialog(String flightId, int points) {
@@ -135,10 +139,8 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
     _controller.toggleInterpolation();
 
     if (wasEnabled) {
-      // Desativando → para ticker
       _stopTicker();
     } else {
-      // Ativando → inicia ticker e reseta interpolação
       _interpolation.reset();
       _startTicker();
     }
@@ -164,99 +166,123 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: Stack(
-          children: [
-            PageView(
-              controller: _pageController,
-              children: [
-                _buildSixPackPage(telemetry),
-                _buildTelemetryPage(telemetry),
-              ],
-            ),
-
-            Positioned(
-              bottom: 16,
-              left: 16,
-              right: 80,
-              child: FlightRecordingControls(
-                instructorId: 'mock_instructor',
-                studentId: 'mock_student',
-                aircraftId: 'mock_aircraft',
+        child: GestureDetector(
+          onTap: _toggleControls,
+          behavior: HitTestBehavior.translucent,
+          child: Stack(
+            children: [
+              PageView(
+                controller: _pageController,
+                children: [
+                  _buildSixPackPage(telemetry),
+                  _buildTelemetryPage(telemetry),
+                ],
               ),
-            ),
 
-            const Positioned(
-              top: 0,
-              left: 0,
-              child: ConnectionStatusWidget(),
-            ),
-
-            if (isStale)
+              // 🎬 Controles de gravação
               Positioned(
-                top: 40,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text(
-                      '⚠️ SEM SINAL - Dados congelados',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+                bottom: 16,
+                left: 16,
+                right: 80,
+                child: AnimatedOpacity(
+                  opacity: _controlsVisible ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: IgnorePointer(
+                    ignoring: !_controlsVisible,
+                    child: FlightRecordingControls(
+                      instructorId: 'mock_instructor',
+                      studentId: 'mock_student',
+                      aircraftId: 'mock_aircraft',
                     ),
                   ),
                 ),
               ),
-          ],
+
+              Positioned(
+                top: 0,
+                left: 0,
+                child: AnimatedOpacity(
+                  opacity: _controlsVisible ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: const ConnectionStatusWidget(),
+                ),
+              ),
+
+              // ⚠️ Aviso sem sinal (sempre visível)
+              if (isStale)
+                Positioned(
+                  top: 40,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        '⚠️ SEM SINAL - Dados congelados',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // ✨ Toggle Interpolação
-          FloatingActionButton(
-            heroTag: 'interpolation',
-            onPressed: _handleToggleInterpolation,
-            backgroundColor: settings.interpolationEnabled 
-                ? Colors.green 
-                : Colors.grey,
-            child: Icon(
-              settings.interpolationEnabled 
-                  ? Icons.auto_awesome 
-                  : Icons.auto_awesome_outlined,
-            ),
-          ),
-          const SizedBox(height: 8),
+      floatingActionButton: AnimatedOpacity(
+        opacity: _controlsVisible ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 200),
+        child: IgnorePointer(
+          ignoring: !_controlsVisible,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ✨ Toggle Interpolação
+              FloatingActionButton(
+                heroTag: 'interpolation',
+                onPressed: _handleToggleInterpolation,
+                backgroundColor: settings.interpolationEnabled 
+                    ? Colors.green 
+                    : Colors.grey,
+                child: Icon(
+                  settings.interpolationEnabled 
+                      ? Icons.auto_awesome 
+                      : Icons.auto_awesome_outlined,
+                ),
+              ),
+              const SizedBox(height: 8),
 
-          // 🔄 Reconectar
-          FloatingActionButton(
-            heroTag: 'reconnect',
-            onPressed: () {
-              _interpolation.reset();
-              _controller.reconnect();
-            },
-            backgroundColor: Colors.blue,
-            child: const Icon(Icons.refresh),
-          ),
-          const SizedBox(height: 8),
+              // 🔄 Reconectar
+              FloatingActionButton(
+                heroTag: 'reconnect',
+                onPressed: () {
+                  _interpolation.reset();
+                  _controller.reconnect();
+                },
+                backgroundColor: Colors.blue,
+                child: const Icon(Icons.refresh),
+              ),
+              const SizedBox(height: 8),
 
-          // ❌ Desconectar
-          FloatingActionButton(
-            heroTag: 'disconnect',
-            onPressed: _controller.disconnect,
-            backgroundColor: Colors.red,
-            child: const Icon(Icons.close),
+              // ❌ Desconectar
+              FloatingActionButton(
+                heroTag: 'disconnect',
+                onPressed: _controller.disconnect,
+                backgroundColor: Colors.red,
+                child: const Icon(Icons.close),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
