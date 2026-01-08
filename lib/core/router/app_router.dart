@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/offline_mode_provider.dart';
 import '../../screens/login_screen.dart';
 import '../../screens/connection_screen.dart';
 import '../../screens/selecao_screen.dart';
@@ -13,6 +14,7 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
+  final isOfflineMode = ref.watch(offlineModeProvider);
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
@@ -24,12 +26,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoading = authState.status == AuthStatus.loading;
       final isInitial = authState.status == AuthStatus.initial;
       final isLoginRoute = state.matchedLocation == '/login';
+      final hasAccess = isAuthenticated || isOfflineMode;
 
       if (isLoading || isInitial) return null;
 
-      if (!isAuthenticated && !isLoginRoute) return '/login';
+      if (!hasAccess && !isLoginRoute) return '/login';
 
-      if (isAuthenticated && isLoginRoute) return '/connection';
+      if (hasAccess && isLoginRoute) return '/connection';
 
       return null;
     },
@@ -88,6 +91,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 class RouterRefreshStream extends ChangeNotifier {
   RouterRefreshStream(Ref ref) {
     ref.listen(authProvider, (_, __) => notifyListeners());
+    ref.listen(offlineModeProvider, (_, __) => notifyListeners());
   }
 }
 

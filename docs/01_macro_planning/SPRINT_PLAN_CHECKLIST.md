@@ -190,14 +190,14 @@ Buffer distribuído estrategicamente:
   - [X] Docs API backend
   - [X] Setup dev guide
 
-- [ ] 🧪 **Testes Reforço**
+- [X] 🧪 **Testes Reforço**
   - [X] Cobertura gaps
   - [X] Edge cases
   - [X] Performance profiling
 
-- [ ] 🎯 **Planning Sprint 4-6**
-  - [ ] Review roadmap
-  - [ ] Ajustar estimativas
+- [X] 🎯 **Planning Sprint 4-6**
+  - [X] Review roadmap
+  - [X] Ajustar estimativas
   - [ ] Preparar ambiente
 
 **Meta:** Consolidar fundação | Tech debt <10% | Docs atualizados

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
+import '../providers/offline_mode_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -34,6 +35,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (success && mounted) {
       context.go('/connection');
     }
+  }
+
+  void _pularLogin() {
+    ref.read(offlineModeProvider.notifier).enableOfflineMode();
+    context.go('/connection');
   }
 
   @override
@@ -232,6 +238,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         letterSpacing: 1,
                                       ),
                                     ),
+                            ),
+                          ),
+                          SizedBox(height: size.height * 0.015),
+                          TextButton.icon(
+                            onPressed: _pularLogin,
+                            icon: Icon(Icons.wifi_off, color: Colors.grey.shade600, size: 18),
+                            label: Text(
+                              'MODO OFFLINE',
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                         ],
