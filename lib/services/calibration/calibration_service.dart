@@ -15,6 +15,27 @@ class CalibrationService {
     _headingOffset = realHeading - currentHeading;
   }
 
+  /// Calibrates pitch against a known reference.
+  ///
+  /// Example: If sensor shows 2° but actual pitch is 5°, offset = 3°
+  void calibratePitch(double realPitch, double currentPitch) {
+    _pitchOffset = realPitch - currentPitch;
+  }
+
+  /// Calibrates roll against a known reference.
+  ///
+  /// Example: If sensor shows -1° but actual roll is 0°, offset = 1°
+  void calibrateRoll(double realRoll, double currentRoll) {
+    _rollOffset = realRoll - currentRoll;
+  }
+
+  /// Calibrates altitude against a known reference.
+  ///
+  /// Example: If sensor shows 920m but airport elevation is 910m, offset = -10m
+  void calibrateAltitude(double realAltitude, double currentAltitude) {
+    _altitudeOffset = realAltitude - currentAltitude;
+  }
+
   /// Zeros pitch to current position.
   ///
   /// Sets current pitch as the reference 0° level.
