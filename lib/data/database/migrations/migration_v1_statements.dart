@@ -39,7 +39,7 @@ class MigrationV1Statements {
       connection_drops INTEGER DEFAULT 0
     )''',
 
-    // 2. TELEMETRY POINTS
+    // 2. TELEMETRY POINTS (com campos sync)
     '''CREATE TABLE telemetry_points (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       flight_session_id TEXT NOT NULL,
@@ -74,6 +74,8 @@ class MigrationV1Statements {
       data_quality TEXT DEFAULT 'valid',
       sensor_status TEXT,
       raw_json TEXT,
+      synced INTEGER NOT NULL DEFAULT 0,
+      synced_at INTEGER,
       FOREIGN KEY (flight_session_id) REFERENCES flight_session(id) ON DELETE CASCADE
     )''',
 
@@ -122,6 +124,8 @@ class MigrationV1Statements {
     'CREATE INDEX idx_telemetry_session_time ON telemetry_points(flight_session_id, timestamp)',
     'CREATE INDEX idx_telemetry_location ON telemetry_points(lat, lng)',
     'CREATE INDEX idx_telemetry_quality ON telemetry_points(data_quality)',
+    'CREATE INDEX idx_telemetry_sync ON telemetry_points(synced, flight_session_id)',
+    'CREATE INDEX idx_telemetry_pending_sync ON telemetry_points(synced, timestamp) WHERE synced = 0',
     'CREATE INDEX idx_session_sync_status ON flight_session(sync_status)',
     'CREATE INDEX idx_photos_sync ON photos(synced, flight_session_id)',
     'CREATE INDEX idx_evaluation_session ON evaluation(flight_session_id)',

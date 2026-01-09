@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/recording/flight_recording_service.dart';
 import '../models/telemetry_data.dart';
 import 'telemetry_provider.dart';
+import '../services/sync/connectivity_service.dart';
 
 /// Estado da gravação
 class RecordingState {
@@ -43,8 +44,16 @@ class RecordingState {
 }
 
 /// Provider do Service (singleton)
+final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
+  final service = ConnectivityService();
+  service.initialize();
+  ref.onDispose(() => service.dispose());
+  return service;
+});
+
 final flightRecordingServiceProvider = Provider<FlightRecordingService>((ref) {
-  final service = FlightRecordingService();
+  final connectivity = ref.watch(connectivityServiceProvider);
+  final service = FlightRecordingService(connectivity: connectivity);
   ref.onDispose(() => service.dispose());
   return service;
 });

@@ -1,119 +1,107 @@
 /// 📡 CONNECTIVITY SERVICE
 ///
-/// Detecta estado da conexão de rede
-/// Notifica quando WiFi conecta/desconecta
-///
-/// Padrão: Stream-based para reatividade
-
+/// Detecta estado REAL da conexão de rede
+/// ⚠️ Verifica internet REAL (não só WiFi conectado)
 import 'dart:async';
+import 'dart:io';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../core/utils/logger.dart';
 
-/// 🌐 Tipos de conexão
-enum ConnectivityType {
-  none,
-  wifi,
-  mobile,
-  ethernet,
-}
+enum ConnectivityType { none, wifi, mobile, ethernet }
 
-/// 📊 Estado da conectividade
 class ConnectivityState {
   final ConnectivityType type;
   final bool isConnected;
+  final bool hasInternet;
   final DateTime timestamp;
 
   const ConnectivityState({
     required this.type,
     required this.isConnected,
+    required this.hasInternet,
     required this.timestamp,
   });
 
-  factory ConnectivityState.disconnected() {
-    return ConnectivityState(
-      type: ConnectivityType.none,
-      isConnected: false,
-      timestamp: DateTime.now(),
-    );
-  }
+  factory ConnectivityState.disconnected() => ConnectivityState(
+    type: ConnectivityType.none,
+    isConnected: false,
+    hasInternet: false,
+    timestamp: DateTime.now(),
+  );
 
-  factory ConnectivityState.wifi() {
-    return ConnectivityState(
-      type: ConnectivityType.wifi,
-      isConnected: true,
-      timestamp: DateTime.now(),
-    );
-  }
-
-  factory ConnectivityState.mobile() {
-    return ConnectivityState(
-      type: ConnectivityType.mobile,
-      isConnected: true,
-      timestamp: DateTime.now(),
-    );
-  }
-
-  /// ✅ Pode fazer sync? (apenas WiFi)
-  bool get canSync => type == ConnectivityType.wifi;
-
-  @override
-  String toString() => 'ConnectivityState($type, connected: $isConnected)';
+  bool get canSync => isConnected && hasInternet;
 }
 
-/// 📡 CONNECTIVITY SERVICE
 class ConnectivityService {
+  final Connectivity _connectivity = Connectivity();
   final _controller = StreamController<ConnectivityState>.broadcast();
   ConnectivityState _currentState = ConnectivityState.disconnected();
-  Timer? _mockTimer;
+  StreamSubscription<List<ConnectivityResult>>? _subscription;
+  Timer? _internetCheckTimer;
 
-  /// 📊 Estado atual
   ConnectivityState get currentState => _currentState;
-
-  /// 📊 Stream de mudanças
   Stream<ConnectivityState> get onConnectivityChanged => _controller.stream;
-
-  /// ✅ Está conectado?
   bool get isConnected => _currentState.isConnected;
-
-  /// ✅ Pode fazer sync? (WiFi only)
   bool get canSync => _currentState.canSync;
 
-  /// 🚀 Inicializar serviço
-  /// 
-  /// TODO: Implementar com connectivity_plus package
-  /// Por agora usa mock que simula WiFi conectado
   Future<void> initialize() async {
-    // Mock: assume WiFi conectado
-    _updateState(ConnectivityState.wifi());
+    final results = await _connectivity.checkConnectivity();
+    await _updateFromResults(results);
+    _subscription = _connectivity.onConnectivityChanged.listen(_updateFromResults);
+    _internetCheckTimer = Timer.periodic(const Duration(seconds: 10), (_) => _checkInternet());
   }
 
-  /// 📡 Atualizar estado manualmente (para testes)
-  void updateState(ConnectivityState state) {
-    _updateState(state);
+  Future<void> _updateFromResults(List<ConnectivityResult> results) async {
+    ConnectivityType type = ConnectivityType.none;
+    for (final result in results) {
+      if (result == ConnectivityResult.mobile) type = ConnectivityType.mobile;
+      if (result == ConnectivityResult.wifi && type != ConnectivityType.mobile) type = ConnectivityType.wifi;
+      if (result == ConnectivityResult.ethernet) type = ConnectivityType.ethernet;
+    }
+    
+    bool hasInternet = false;
+    if (type != ConnectivityType.none) {
+      hasInternet = await _checkInternet();
+    }
+
+    final newState = ConnectivityState(
+      type: type,
+      isConnected: type != ConnectivityType.none,
+      hasInternet: hasInternet,
+      timestamp: DateTime.now(),
+    );
+    
+    if (_currentState.canSync != newState.canSync) {
+      Logger.info('🌐 Conectividade: ${newState.type}, internet: ${newState.hasInternet}', 'Connectivity');
+    }
+    _currentState = newState;
+    _controller.add(newState);
   }
 
-  /// 🔌 Simular desconexão (para testes)
-  void simulateDisconnect() {
-    _updateState(ConnectivityState.disconnected());
+  Future<bool> _checkInternet() async {
+    try {
+      final result = await InternetAddress.lookup('supabase.avionica.quadritech.com.br')
+          .timeout(const Duration(seconds: 3));
+      final hasInternet = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+      if (hasInternet != _currentState.hasInternet) {
+        _currentState = ConnectivityState(
+          type: _currentState.type,
+          isConnected: _currentState.isConnected,
+          hasInternet: hasInternet,
+          timestamp: DateTime.now(),
+        );
+        _controller.add(_currentState);
+      }
+      return hasInternet;
+    } catch (e) {
+      Logger.warning('⚠️ Sem internet real: $e', 'Connectivity');
+      return false;
+    }
   }
 
-  /// 📶 Simular WiFi conectado (para testes)
-  void simulateWifiConnected() {
-    _updateState(ConnectivityState.wifi());
-  }
-
-  /// 📱 Simular dados móveis (para testes)
-  void simulateMobileConnected() {
-    _updateState(ConnectivityState.mobile());
-  }
-
-  /// 🔄 Atualizar estado interno
-  void _updateState(ConnectivityState state) {
-    _currentState = state;
-    _controller.add(state);
-  }
-
-  /// 🧹 Dispose
   void dispose() {
-    _mockTimer?.cancel();
+    _subscription?.cancel();
+    _internetCheckTimer?.cancel();
     _controller.close();
   }
 }

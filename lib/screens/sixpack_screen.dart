@@ -230,6 +230,22 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
               ),
 
               // ⚠️ Aviso sem sinal (sempre visível)
+              // 🔍 DEBUG SYNC
+              Positioned(
+                top: 100,
+                left: 10,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  color: Colors.black87,
+                  child: Consumer(builder: (context, ref, _) {
+                    final conn = ref.watch(connectivityServiceProvider);
+                    return Text(
+                      "NET: ${conn.currentState.type}\nERR: ${ref.watch(flightRecordingProvider).error ?? "none"}\nINT: ${conn.currentState.hasInternet}\nSYNC: ${conn.canSync}",
+                      style: const TextStyle(color: Colors.yellow, fontSize: 10),
+                    );
+                  }),
+                ),
+              ),
               if (isStale)
                 Positioned(
                   top: 40,

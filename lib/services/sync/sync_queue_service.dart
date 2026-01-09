@@ -9,6 +9,7 @@
 
 import 'dart:async';
 import '../../data/repositories/flight_session_repository.dart';
+import '../../data/repositories/telemetry_point_repository.dart';
 import '../../data/database/models/flight_session_entity.dart';
 import 'connectivity_service.dart';
 import 'i_sync_remote_service.dart';
@@ -39,6 +40,7 @@ class SyncQueueConfig {
 /// 🔄 SYNC QUEUE SERVICE
 class SyncQueueService {
   final FlightSessionRepository _repository;
+  final TelemetryPointRepository _telemetryRepository;
   final ISyncRemoteService _remoteService;
   final ConnectivityService _connectivity;
   final SyncQueueConfig config;
@@ -52,10 +54,12 @@ class SyncQueueService {
 
   SyncQueueService({
     required FlightSessionRepository repository,
+    required TelemetryPointRepository telemetryRepository,
     required ISyncRemoteService remoteService,
     required ConnectivityService connectivity,
     this.config = const SyncQueueConfig(),
   })  : _repository = repository,
+        _telemetryRepository = telemetryRepository,
         _remoteService = remoteService,
         _connectivity = connectivity;
 
@@ -206,6 +210,19 @@ class SyncQueueService {
       final result = await _remoteService.uploadFlightSession(session);
 
       if (result.success) {
+        // 🔄 ENVIAR TELEMETRIA
+        final points = await _telemetryRepository.getAllByFlight(session.id);
+        if (points.isNotEmpty) {
+          final telemetryData = points.map((p) => p.toSupabaseMap(result.remoteId!)).toList();
+          final telemetryResult = await _remoteService.uploadTelemetry(
+            result.remoteId!,
+            telemetryData,
+          );
+          if (telemetryResult.success) {
+            final ids = points.where((p) => p.id != null).map((p) => p.id!).toList();
+            await _telemetryRepository.markAsSynced(session.id, ids);
+          }
+        }
         await _repository.updateSyncStatus(session.id, 'completed');
         return true;
       } else {

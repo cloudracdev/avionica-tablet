@@ -186,4 +186,142 @@ class TelemetryPointRepository {
       await FlightDatabase.close(flightId);
     }
   }
+
+  // ============================================
+  // 🔄 SYNC METHODS
+  // ============================================
+
+  /// 📊 Contar pontos pendentes de sync
+  Future<int> countPendingSync(String flightId) async {
+    final db = await FlightDatabase.open(flightId);
+
+    try {
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM telemetry_points WHERE synced = 0',
+      );
+
+      return Sqflite.firstIntValue(result) ?? 0;
+    } finally {
+      await FlightDatabase.close(flightId);
+    }
+  }
+
+  /// 📖 Buscar pontos NÃO sincronizados (para backlog)
+  /// 
+  /// Ordenado por timestamp ASC para manter ordem cronológica
+  Future<List<TelemetryPointEntity>> getPendingSync(
+    String flightId, {
+    int limit = 100,
+  }) async {
+    final db = await FlightDatabase.open(flightId);
+
+    try {
+      final results = await db.query(
+        'telemetry_points',
+        where: 'synced = 0',
+        orderBy: 'timestamp ASC',
+        limit: limit,
+      );
+
+      return results.map((map) => TelemetryPointEntity.fromMap(map)).toList();
+    } finally {
+      await FlightDatabase.close(flightId);
+    }
+  }
+
+  /// 📖 Buscar ponto mais recente NÃO sincronizado (para live)
+  Future<TelemetryPointEntity?> getLatestUnsyncedPoint(String flightId) async {
+    final db = await FlightDatabase.open(flightId);
+
+    try {
+      final results = await db.query(
+        'telemetry_points',
+        where: 'synced = 0',
+        orderBy: 'timestamp DESC',
+        limit: 1,
+      );
+
+      if (results.isEmpty) return null;
+      return TelemetryPointEntity.fromMap(results.first);
+    } finally {
+      await FlightDatabase.close(flightId);
+    }
+  }
+
+  /// ✅ Marcar pontos como sincronizados (por IDs)
+  Future<int> markAsSynced(String flightId, List<int> pointIds) async {
+    if (pointIds.isEmpty) return 0;
+
+    final db = await FlightDatabase.open(flightId);
+
+    try {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final placeholders = List.filled(pointIds.length, '?').join(',');
+
+      final count = await db.rawUpdate(
+        'UPDATE telemetry_points SET synced = 1, synced_at = ? WHERE id IN ($placeholders)',
+        [now, ...pointIds],
+      );
+
+      return count;
+    } finally {
+      await FlightDatabase.close(flightId);
+    }
+  }
+
+  /// ✅ Marcar pontos como sincronizados (por range de timestamp)
+  Future<int> markAsSyncedByTimestamp(
+    String flightId,
+    int fromTimestamp,
+    int toTimestamp,
+  ) async {
+    final db = await FlightDatabase.open(flightId);
+
+    try {
+      final now = DateTime.now().millisecondsSinceEpoch;
+
+      final count = await db.rawUpdate(
+        '''UPDATE telemetry_points 
+           SET synced = 1, synced_at = ? 
+           WHERE timestamp >= ? AND timestamp <= ? AND synced = 0''',
+        [now, fromTimestamp, toTimestamp],
+      );
+
+      return count;
+    } finally {
+      await FlightDatabase.close(flightId);
+    }
+  }
+
+  /// 📊 Estatísticas de sync
+  Future<Map<String, dynamic>> getSyncStats(String flightId) async {
+    final db = await FlightDatabase.open(flightId);
+
+    try {
+      final result = await db.rawQuery('''
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN synced = 1 THEN 1 ELSE 0 END) as synced,
+          SUM(CASE WHEN synced = 0 THEN 1 ELSE 0 END) as pending
+        FROM telemetry_points
+      ''');
+
+      if (result.isEmpty) {
+        return {'total': 0, 'synced': 0, 'pending': 0, 'percentage': 0.0};
+      }
+
+      final row = result.first;
+      final total = (row['total'] as int?) ?? 0;
+      final synced = (row['synced'] as int?) ?? 0;
+
+      return {
+        'total': total,
+        'synced': synced,
+        'pending': (row['pending'] as int?) ?? 0,
+        'percentage': total > 0 ? (synced / total) * 100 : 0.0,
+      };
+    } finally {
+      await FlightDatabase.close(flightId);
+    }
+  }
 }

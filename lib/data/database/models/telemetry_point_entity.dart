@@ -6,7 +6,7 @@
 /// - Conversão Map ↔ Object
 /// - Conversão TelemetryData → Entity
 /// - Validações de dados
-/// - Immutable model
+/// - Controle de sync (synced, synced_at)
 
 import '../../../models/telemetry_data.dart';
 
@@ -16,7 +16,7 @@ class TelemetryPointEntity {
   final String flightSessionId;
   final int timestamp;
 
-  // �� GPS
+  // 📍 GPS
   final double lat;
   final double lng;
   final double? gpsAltitude;
@@ -62,6 +62,10 @@ class TelemetryPointEntity {
   final String? sensorStatus;
   final String? rawJson;
 
+  // 🔄 Sync Control
+  final int synced;
+  final int? syncedAt;
+
   const TelemetryPointEntity({
     this.id,
     required this.flightSessionId,
@@ -96,7 +100,12 @@ class TelemetryPointEntity {
     this.dataQuality = 'valid',
     this.sensorStatus,
     this.rawJson,
+    this.synced = 0,
+    this.syncedAt,
   });
+
+  /// ✅ Já foi sincronizado?
+  bool get isSynced => synced == 1;
 
   factory TelemetryPointEntity.fromTelemetryData(
     TelemetryData data,
@@ -123,6 +132,8 @@ class TelemetryPointEntity {
       heading: data.heading,
       verticalSpeed: data.vario,
       dataQuality: data.gpsValid ? 'valid' : 'fallback',
+      synced: 0,
+      syncedAt: null,
     );
   }
 
@@ -160,6 +171,32 @@ class TelemetryPointEntity {
       'data_quality': dataQuality,
       'sensor_status': sensorStatus,
       'raw_json': rawJson,
+      'synced': synced,
+      'synced_at': syncedAt,
+    };
+  }
+
+  /// 🌐 Converter para formato Supabase (tabela telemetria)
+  Map<String, dynamic> toSupabaseMap(String vooId) {
+    return {
+      'voo_id': vooId,
+      'seq': id ?? timestamp,
+      'timestamp': DateTime.fromMillisecondsSinceEpoch(timestamp).toIso8601String(),
+      'latitude': lat,
+      'longitude': lng,
+      'altitude_msl_ft': (altitude ?? 0) * 3.28084,
+      'ground_speed_kts': (velocity ?? 0) / 1.852,
+      'heading_true': heading?.round(),
+      'satellites': gpsSatellites,
+      'hdop': gpsHdop,
+      'pitch': imuPitch,
+      'roll': imuRoll,
+      'yaw': imuYaw,
+      'vsi_fpm': (verticalSpeed ?? 0) * 196.85,
+      'qnh_mb': baroPressure != null ? baroPressure! / 100 : null,
+      'oat_celsius': baroTemperature,
+      'turn_rate': gyroZ,
+      'status': dataQuality,
     };
   }
 
@@ -198,6 +235,8 @@ class TelemetryPointEntity {
       dataQuality: map['data_quality'] as String? ?? 'valid',
       sensorStatus: map['sensor_status'] as String?,
       rawJson: map['raw_json'] as String?,
+      synced: map['synced'] as int? ?? 0,
+      syncedAt: map['synced_at'] as int?,
     );
   }
 
@@ -268,6 +307,8 @@ class TelemetryPointEntity {
     String? dataQuality,
     String? sensorStatus,
     String? rawJson,
+    int? synced,
+    int? syncedAt,
   }) {
     return TelemetryPointEntity(
       id: id ?? this.id,
@@ -303,11 +344,21 @@ class TelemetryPointEntity {
       dataQuality: dataQuality ?? this.dataQuality,
       sensorStatus: sensorStatus ?? this.sensorStatus,
       rawJson: rawJson ?? this.rawJson,
+      synced: synced ?? this.synced,
+      syncedAt: syncedAt ?? this.syncedAt,
+    );
+  }
+
+  /// 🔄 Marcar como sincronizado
+  TelemetryPointEntity markAsSynced() {
+    return copyWith(
+      synced: 1,
+      syncedAt: DateTime.now().millisecondsSinceEpoch,
     );
   }
 
   @override
-  String toString() => 'TelemetryPointEntity(id: $id, flight: $flightSessionId, ts: $timestamp, lat: ${lat.toStringAsFixed(6)}, lng: ${lng.toStringAsFixed(6)}, quality: $dataQuality)';
+  String toString() => 'TelemetryPointEntity(id: $id, flight: $flightSessionId, ts: $timestamp, lat: ${lat.toStringAsFixed(6)}, lng: ${lng.toStringAsFixed(6)}, synced: $synced)';
 
   @override
   bool operator ==(Object other) => identical(this, other) || other is TelemetryPointEntity && other.id == id && other.flightSessionId == flightSessionId && other.timestamp == timestamp;
