@@ -1,6 +1,6 @@
 /// 📋 TELA MEUS VOOS
 /// 
-/// Lista voos salvos + Exportar CSV
+/// Lista voos salvos + Exportar CSV + Descartar
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -110,6 +110,44 @@ class _MyFlightsScreenState extends ConsumerState<MyFlightsScreen> {
     }
   }
 
+  Future<void> _discardFlight(String flightId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('🗑️ Descartar Voo?'),
+        content: const Text(
+          'Todos os dados de telemetria serão apagados.\n\n'
+          'Esta ação não pode ser desfeita.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('CANCELAR'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('DESCARTAR'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await FlightDatabase.delete(flightId);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Voo descartado')),
+        );
+        _loadFlights();
+      }
+    }
+  }
+
   String _formatDate(int? timestamp) {
     if (timestamp == null) return '-';
     final dt = DateTime.fromMillisecondsSinceEpoch(timestamp);
@@ -143,6 +181,7 @@ class _MyFlightsScreenState extends ConsumerState<MyFlightsScreen> {
                   itemCount: _flights.length,
                   itemBuilder: (ctx, i) {
                     final f = _flights[i];
+                    final flightId = f['flightId'] as String;
                     return Card(
                       margin: const EdgeInsets.all(8),
                       child: ListTile(
@@ -154,7 +193,7 @@ class _MyFlightsScreenState extends ConsumerState<MyFlightsScreen> {
                               ? Colors.green 
                               : Colors.orange,
                         ),
-                        title: Text('Voo ${(f['flightId'] as String).substring(0, 8)}...'),
+                        title: Text('Voo ${flightId.substring(0, 8)}...'),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -164,9 +203,20 @@ class _MyFlightsScreenState extends ConsumerState<MyFlightsScreen> {
                           ],
                         ),
                         isThreeLine: true,
-                        trailing: IconButton(
-                          icon: const Icon(Icons.download, color: Colors.blue),
-                          onPressed: () => _exportCsv(f['flightId']),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.download, color: Colors.blue),
+                              onPressed: () => _exportCsv(flightId),
+                              tooltip: 'Exportar CSV',
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => _discardFlight(flightId),
+                              tooltip: 'Descartar',
+                            ),
+                          ],
                         ),
                       ),
                     );

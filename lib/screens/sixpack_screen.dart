@@ -36,6 +36,9 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
   TelemetryData? _lastRawData;
   bool _recoveryDialogShown = false;
   bool _controlsVisible = true;
+  
+  // 🔄 Listener manual para recovery
+  ProviderSubscription<RecordingState>? _recordingSubscription;
 
   @override
   void initState() {
@@ -48,8 +51,36 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
       _controller.initializeWatchdog();
       _controller.setupOrientations();
       _startInterpolationIfEnabled();
-      _checkAndShowRecoveryDialog();
+      _setupRecoveryListener();
     });
+  }
+
+  void _setupRecoveryListener() {
+    // Cancelar listener anterior se existir
+    _recordingSubscription?.close();
+    
+    // Criar listener manual (funciona fora do build)
+    _recordingSubscription = ref.listenManual<RecordingState>(
+      flightRecordingProvider,
+      (previous, next) {
+        _tryShowRecoveryDialog(next);
+      },
+      fireImmediately: true, // 🔑 Dispara imediatamente com estado atual
+    );
+  }
+
+  void _tryShowRecoveryDialog(RecordingState state) {
+    if (!mounted || _recoveryDialogShown) return;
+    if (state.flightId != null && !state.isRecording) {
+      _recoveryDialogShown = true;
+      
+      // Usar addPostFrameCallback para garantir que o context está pronto
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showRecoveryDialog(state.flightId!, state.pointsRecorded);
+        }
+      });
+    }
   }
 
   void _startInterpolationIfEnabled() {
@@ -61,17 +92,6 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
 
   void _toggleControls() {
     setState(() => _controlsVisible = !_controlsVisible);
-  }
-
-  void _checkAndShowRecoveryDialog() {
-    Future.delayed(const Duration(milliseconds: 800), () {
-      if (!mounted || _recoveryDialogShown) return;
-      final state = ref.read(flightRecordingProvider);
-      if (state.flightId != null && !state.isRecording) {
-        _recoveryDialogShown = true;
-        _showRecoveryDialog(state.flightId!, state.pointsRecorded);
-      }
-    });
   }
 
   void _showRecoveryDialog(String flightId, int points) {
@@ -148,6 +168,7 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
 
   @override
   void dispose() {
+    _recordingSubscription?.close();
     _stopTicker();
     _pageController.dispose();
     super.dispose();
