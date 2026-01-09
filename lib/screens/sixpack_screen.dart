@@ -234,16 +234,23 @@ class _SixPackScreenState extends ConsumerState<SixPackScreen>
               Positioned(
                 top: 100,
                 left: 10,
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  color: Colors.black87,
-                  child: Consumer(builder: (context, ref, _) {
-                    final conn = ref.watch(connectivityServiceProvider);
-                    return Text(
-                      "NET: ${conn.currentState.type}\nERR: ${ref.watch(flightRecordingProvider).error ?? "none"}\nINT: ${conn.currentState.hasInternet}\nSYNC: ${conn.canSync}",
-                      style: const TextStyle(color: Colors.yellow, fontSize: 10),
-                    );
-                  }),
+                child: AnimatedOpacity(
+                  opacity: _controlsVisible ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: GestureDetector(
+                    onTap: _toggleControls,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      color: Colors.black87,
+                      child: Consumer(builder: (context, ref, _) {
+                        final conn = ref.watch(connectivityServiceProvider);
+                        return Text(
+                          "NET: ${conn.currentState.type}\nINT: ${conn.currentState.hasInternet}\nSYNC: ${conn.canSync}",
+                          style: const TextStyle(color: Colors.yellow, fontSize: 10),
+                        );
+                      }),
+                    ),
+                  ),
                 ),
               ),
               if (isStale)
